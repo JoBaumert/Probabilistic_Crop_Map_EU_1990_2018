@@ -1,4 +1,4 @@
-
+#%%
 import rasterio as rio
 from rasterio.plot import show
 from rasterio.warp import reproject, Resampling
@@ -6,7 +6,7 @@ import numpy as np
 from collections import Counter
 from rasterio.mask import mask
 from shapely.geometry import box
-
+#%%
 def read_raster(file):
     with rio.open(file) as src_file:
         raster_file = src_file.read()

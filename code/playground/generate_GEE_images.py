@@ -8,7 +8,8 @@ from rasterio.windows import from_bounds
 import ee
 import geemap
 
-# %%
+
+#%%
 ee.Authenticate()
 ee.Initialize()
 #%%
