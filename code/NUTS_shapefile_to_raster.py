@@ -30,6 +30,9 @@ output_shape=rio.open(main_path+"/data/preprocessed/clipped_nuts.tif")
 # %%
 transform=output_shape.transform
 # %%
+
+NUTS_shapefile
+#%%
 #get the NUTS level from NUTS codes. The NUTS level is equal to the len of the NUTS code - 2 (countries have level 0)
 NUTS_shapefile["LEVL_CODE"]=np.char.str_len(np.array(NUTS_shapefile.FID).astype(str))-2
 #%%
@@ -90,4 +93,12 @@ show(NUTS2_raster)
 
 # %%
 #TODO: Export raster with NUTS index and save in separate file which NUTS ID the index refers to
+# %%
+NUTS2
+# %%
+
+# %%
+show(np.where(np.isin(NUTS2_raster,NUTS2.index[np.where(NUTS2.CNTR_CODE=="UK")[0]]),1,0))
+# %%
+
 # %%
