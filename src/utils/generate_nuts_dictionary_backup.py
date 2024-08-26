@@ -7,10 +7,14 @@ from rasterio.transform import from_bounds
 import numpy as np
 import os
 from pathlib import Path
+from rasterio.plot import show
+
 
 main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
 result_dir = main_path+"/data/results/"
 os.makedirs(result_dir, exist_ok=True)
+raw_dir = main_path+"/data/raw/"
+os.makedirs(raw_dir, exist_ok=True)
 
 # List of years to process
 years = [2003, 2006, 2010, 2013, 2016, 2021]
@@ -23,7 +27,7 @@ combined_df = pd.DataFrame()
 for year in years:
 
     
-    file_path = main_path+"/data/raw/nuts_shapedata/NUTS_RG_01M_" + str(year) + "_3035.shp/NUTS_RG_01M_" + str(year) + "_3035.shp"
+    file_path = raw_dir+"nuts_shapedata/NUTS_RG_01M_" + str(year) + "_3035.shp/NUTS_RG_01M_" + str(year) + "_3035.shp"
     
     # Load the shapefile
     NUTS_shapefile = gpd.read_file(file_path, encoding='latin1')
@@ -58,7 +62,4 @@ for year in years:
     combined_df = pd.concat([combined_df, temp_df], ignore_index=True)
 
 # Generate Dictionary 
-combined_df.to_csv(os.path.join(result_dir, "nuts_regions_dictionary.csv"), index=False)
-
-
-# %%
+combined_df.to_csv(os.path.join(result_dir, "csv/nuts_regions_dictionary.csv"), index=False)

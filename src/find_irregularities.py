@@ -1,77 +1,67 @@
 #%%
 import numpy as np
 import pandas as pd
+from pathlib import Path
+import os 
+from tqdm import tqdm
+
+main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
+result_dir = main_path+"/data/results/"
+os.makedirs(result_dir, exist_ok=True)
+preprocessed_dir = main_path+"/data/preprocessed/"
+os.makedirs(preprocessed_dir, exist_ok=True)
+
+# %% find unique years for unique nuts ids in combined csv
+def create_yearwise_table_filtered_timeseries(regional_cropdata_df):
+    nuts_codes = regional_cropdata_df[0].unique()
+    years = list(range(1984, 2019))
+    result_df = pd.DataFrame(0, index=regional_cropdata_df[0].unique(), columns=years)
+   
+    for nuts_code in nuts_codes:
+        unique_years = regional_cropdata_df[regional_cropdata_df[0] == nuts_code][3].unique()
+        result_df.loc[nuts_code, unique_years] = 1
+
+    result_df.reset_index(inplace=True)
+    result_df.rename(columns={'index': 'nuts_code'}, inplace=True)
+
+    result_df.to_csv(result_dir+'csv/yearwise_regional_cropdata.csv', index=False)
 
 
-filtered = pd.read_csv('/home/bajpai/Uni/Josef Hiwi/DGPCM_1990_2020/data/preprocessed/filtered_final.csv', header=None)
-filtered[0] = filtered[0].astype(str).str.rstrip('0').replace('', '0')
-filtered.to_csv('filtered_new.csv', index=False, header=False)
+# %% find unique years for unique nuts ids in combined csv
+def create_yearwise_table_nuts_region_dictionary(nuts_regions_dictionary_df):
+    nuts_codes = nuts_regions_dictionary_df['NUTS_ID'].unique()
+    years = [2003, 2006, 2010, 2013, 2016, 2021]
+    result_df = pd.DataFrame(0, index=nuts_regions_dictionary_df['NUTS_ID'].unique(), columns=years)
 
+    for nuts_id in tqdm(nuts_regions_dictionary_df['NUTS_ID'].unique()):
+        for year in years:
+            if ((nuts_regions_dictionary_df['NUTS_ID'] == nuts_id) & (nuts_regions_dictionary_df['year'] == year)).any():
+                result_df.at[nuts_id, year] = 1
 
+    result_df.reset_index(inplace=True)
+    result_df.rename(columns={'index': 'NUTS_ID'}, inplace=True)
+
+    result_df.to_csv(result_dir+'csv/yearwise_nuts_regions.csv', index=False)
 #%%
-filtered = pd.read_csv('/home/bajpai/Uni/Josef Hiwi/DGPCM_1990_2020/data/preprocessed/filtered_new.csv', header=None)
-combined_nuts = pd.read_csv('/home/bajpai/Uni/Josef Hiwi/DGPCM_1990_2020/data/preprocessed/combined_nuts_regions.csv')
 
-#%%
-filtered.head()
-#%%
-combined_nuts.head()
-
-#%%
-filtered.tail()
-#%%
-combined_nuts.tail()
-# %%
-unique_values = {}
-
-# Loop through each unique value in column 0
-for value in filtered[0].unique():
-    # Find the corresponding unique values from column 3
-    corresponding_values = filtered[filtered[0] == value][3].unique()
-    # Store them in the dictionary
-    unique_values[value] = corresponding_values
-
-# Print the results
-for key, values in unique_values.items():
-    print(f"Unique values in column 3 corresponding to '{key}' in column 0: {list(values)}")
-# %%
-#Find unique years for unique nuts ids
-
-nuts_codes = filtered[0].unique()
-years = list(range(1984, 2019))
-output_df = pd.DataFrame(0, index=nuts_codes, columns=years)
-
-for nuts_code in nuts_codes:
-    # Get unique years for this nuts_code
-    unique_years = filtered[filtered[0] == nuts_code][3].unique()
+if __name__ == '__main__':
+    # load preprocessed data
+    regional_cropdata = pd.read_csv(result_dir+'csv/filtered_regional_cropdata.csv', header=None)
+    nuts_regions_dictionary = pd.read_csv(result_dir+'csv/nuts_regions_dictionary.csv')
     
-    # Mark corresponding years with 1
-    output_df.loc[nuts_code, unique_years] = 1
+    #%% create yearwise csv files
+    create_yearwise_table_filtered_timeseries(regional_cropdata)
+    #%%
+    create_yearwise_table_nuts_region_dictionary(nuts_regions_dictionary)
 
-output_df.reset_index(inplace=True)
-output_df.rename(columns={'index': 'nuts_code'}, inplace=True)
+    #%% sanity check - yearwise table for cropdata and nuts regions
 
-output_df.to_csv('output.csv', index=False)
+    cropdata_df = pd.read_csv(result_dir+'csv/yearwise_regional_cropdata.csv')
+    cropdata_df.head()
+    # sanity check - yearwise table for nuts regions
+    nuts_df = pd.read_csv(result_dir+'csv/yearwise_nuts_regions.csv')
+    nuts_df.head()
 
-# %%sanity check
-output_df = pd.read_csv('/home/bajpai/Uni/Josef Hiwi/DGPCM_1990_2020/src/output.csv')
 
-output_df.head()
+
 # %%
-#find unique years for unique nuts ids in combined csv
-
-nuts_codes = combined_nuts[0].unique()
-years = list(range(1984, 2019))
-output_df = pd.DataFrame(0, index=nuts_codes, columns=years)
-
-for nuts_code in nuts_codes:
-    # Get unique years for this nuts_code
-    unique_years = filtered[filtered['NUTS_ID'] == nuts_code]['year'].unique()
-    
-    # Mark corresponding years with 1
-    output_df.loc[nuts_code, unique_years] = 1
-
-output_df.reset_index(inplace=True)
-
-
-output_df.to_csv('output.csv', index=False)
