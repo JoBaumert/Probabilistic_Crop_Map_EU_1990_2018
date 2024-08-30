@@ -2,7 +2,19 @@ import pandas as pd
 import numpy as np
 import gc
 import os
+from pathlib import Path
 
+main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
+preprocessed_dir = main_path+"/data/preprocessed"
+os.makedirs(preprocessed_dir, exist_ok=True)
+
+#%% strip trailing zeros from NUTS column of time series dataset
+def strip_zeros():
+    filtered = pd.read_csv(preprocessed_dir+'filtered_final.csv', header=None)
+    filtered[0] = filtered[0].astype(str).str.rstrip('0').replace('', '0')
+    filtered.to_csv('filtered_new.csv', index=False, header=False)
+
+    
 def to_table(element):
     try:
         element = str(element).split("'")
@@ -78,3 +90,5 @@ while True:
     gc.collect()
 
 print("Processing complete!")
+
+
