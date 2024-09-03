@@ -24,7 +24,7 @@ list(data["3"].value_counts().keys())
 # %%
 NUTS_regions
 # %%
-NUTS2_regs
+
 # %%
 NUTS_regions
 # %%

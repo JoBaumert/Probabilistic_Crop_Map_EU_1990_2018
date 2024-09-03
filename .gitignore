@@ -67,6 +67,12 @@ coverage.xml
 *.pkl
 *.nc
 *.tif
+*.prj
+*.shp
+*.shx
+*.cpg
+*.dbf
+
 
 # Django stuff:
 *.log
