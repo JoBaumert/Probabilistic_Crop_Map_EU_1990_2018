@@ -29,8 +29,7 @@ filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata
 filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["year"]>=1990]
 #%%
 yearwise_nuts_regions=pd.read_csv(result_dir+"csv/yearwise_nuts_regions.csv")
-#%%
-yearwise_nuts_regions
+
 #%%
 all_years_all_regions=pd.DataFrame()
 for year in range(1990,2019):
@@ -55,19 +54,22 @@ for year in range(1990,2019):
     #verify
     print("un-matched regions: "+str(np.where(np.invert(np.isin(all_matches["CAPRI_code"],capri_nuts_ids)))))
     all_years_all_regions=pd.concat((all_years_all_regions,all_matches))
-#%%
-all_years_all_regions
+
 #%%
 all_years_all_regions["country"]=np.array(all_years_all_regions["NUTS_ID"]).astype("U2")
 all_years_all_regions["NUTS_level"]=np.char.str_len(np.array(all_years_all_regions["NUTS_ID"]).astype(str))-2
 
-a=all_years_all_regions[["year","country","NUTS_level"]].groupby(["year","country"]).max().reset_index()
-relevant_regions=pd.merge(a,all_years_all_regions,how="left",on=["year","country","NUTS_level"])
-
-relevant_cropdata=pd.merge(relevant_regions,filtered_regional_cropdata,how="left",on=["CAPRI_code","year"])
+#a=all_years_all_regions[["year","country","NUTS_level"]].groupby(["year","country"]).max().reset_index()
+#relevant_regions=pd.merge(a,all_years_all_regions,how="left",on=["year","country","NUTS_level"])
 #%%
-relevant_cropdata
+all_years_all_regions
+#%%
+relevant_cropdata=pd.merge(all_years_all_regions,filtered_regional_cropdata,how="left",on=["CAPRI_code","year"])
+
 #%%
 """IMPORTANT: some regions were split over time, so that 'CAPRI_code' is matched with more than one 'NUTS_ID', e.g., see the following example:"""
 relevant_cropdata[(relevant_cropdata["year"]==1990)&(relevant_cropdata["CAPRI_code"]=="IT310000")]
+# %%
+relevant_cropdata.to_csv(preprocessed_dir+"/csv/relevant_crop_data.csv")
+
 # %%

@@ -210,37 +210,128 @@ def get_product_name(taskname,year=None):
         return taskname[4:]+"_"+str(year)
     else:
         return taskname[4:]
-# %%
-years
+
 #%%
 if __name__ == "__main__":
     tasks=pd.read_excel(path_to_taskfile,sheet_name="task")
-    years=pd.read_excel(path_to_taskfile,sheet_name="years")
-    #%%
+    years=pd.read_excel(path_to_taskfile,sheet_name="all_feature_years")
+    lucas_feature_years=pd.read_excel(path_to_taskfile,sheet_name="LUCAS_feature_years")
+    LUCAS_dataset = ee.FeatureCollection('JRC/LUCAS_HARMO/THLOC/V1')
+
     for i in range(len(tasks)):
         taskname=tasks["task"].iloc[i]
         frequency=tasks["frequency"].iloc[i]
         if frequency!="static":
+            
             for j in range(len(years)):
                 year=years["year"].iloc[j]
                 dates=get_start_and_end_dates(year,frequency)
                 print("export " +get_product_name(taskname,year))
-                a=locals()[taskname](dates["start_dates"],dates["end_dates"])
 
                 geemap.ee_export_image_to_drive(
                     locals()[taskname](dates["start_dates"],dates["end_dates"]), #here we call the function indicated by taskname
-                    folder="GEE/DGPCM_19902020",
+                    folder="GEE_DGPCM_19902020",
                     description=get_product_name(taskname,year), 
                     scale=1000,          
                     region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
-            )
+                )
+
+                #if the selected year is among those neeeded for LUCAS, also do the feature merge for LUCAS points
+                if year in np.array(lucas_feature_years["feature_year"]):
+                    print("export " +get_product_name(taskname,year)+" for LUCAS")
+                    lucas_year=int(lucas_feature_years[lucas_feature_years["feature_year"]==year]["LUCAS_year"].iloc[0])
+                    selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",lucas_year)).select([
+                        "id",
+                        "point_id",
+                        "year",
+                        "nuts3",
+                        "lc1"
+                        "lc1_label",
+                        "gps_lat"
+                        
+                    ])
+                    
+                    feature_image=locals()[taskname](dates["start_dates"],dates["end_dates"])
+                    sampled_points=feature_image.sampleRegions(
+                        collection=selected_LUCAS_data,
+                        projection=ee.Projection("epsg:3035",transform=transform_list[:6])
+                    )
+                    
+                    geemap.ee_export_vector_to_drive(
+                    collection=sampled_points,
+                    folder="GEE_DGPCM_19902020",
+                    description="LUCAS_"+str(lucas_year)+"_"+get_product_name(taskname,year),
+                    fileFormat='CSV',
+                )
+                
+          
+        else:
+            print("export " +get_product_name(taskname))
+            #export features for entire EU
+            geemap.ee_export_image_to_drive(
+                    locals()[taskname](), #here we call the function indicated by taskname
+                    folder="GEE_DGPCM_19902020",
+                    description=get_product_name(taskname), 
+                    scale=1000,          
+                    region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
+                )
+            
+            #export features for LUCAS points, for each LUCAS year individually to keep output data size limited
+            feature_image=locals()[taskname]()
+            
+            for lucas_year in lucas_feature_years["LUCAS_year"].unique():
+                lucas_year=int(lucas_year)
+                print("export for LUCAS "+str(lucas_year))
+                selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",lucas_year)).select([
+                        "id",
+                        "point_id",
+                        "year",
+                        "nuts3",
+                        "lc1"
+                        "lc1_label",
+                        "gps_lat"
+                        
+                ])
+                
+                sampled_points=feature_image.sampleRegions(
+                    collection=selected_LUCAS_data,
+                    projection=ee.Projection("epsg:3035",transform=transform_list[:6])
+                    )
+                
+                geemap.ee_export_vector_to_drive(
+                    collection=sampled_points,
+                    folder="GEE_DGPCM_19902020",
+                    description="LUCAS_"+str(lucas_year)+"_"+get_product_name(taskname),
+                    fileFormat='CSV',
+                )
+
+            
 #%%
-get_start_and_end_dates(1987,"annual")
+for lucas_year in lucas_feature_years["LUCAS_year"].unique():
+    print(lucas_year)
+#%%
+lucas_feature_years["LUCAS_year"].unique()[0]
 #%%
 a=get_mean_temperature("1987-01-01","1987-12-31",return_reprojection=True)
 #%%
+lucas_year=2006
+selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",lucas_year)).select([
+                        "id",
+                        "point_id",
+                        "year",
+                        "nuts3",
+                        "lc1"
+                        "lc1_label",
+                        "gps_lat"
+                        
+                ])
+                
+sampled_points=feature_image.sampleRegions(
+    collection=selected_LUCAS_data,
+    projection=ee.Projection("epsg:3035",transform=transform_list[:6])
+    )
 Map=geemap.Map()
-Map.addLayer(a)
+Map.addLayer(sampled_points)
 Map.set_center(8,50,8)
 Map
 # %%
@@ -270,6 +361,7 @@ selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",2018)).select([
     "nuts3",
     "lc1"
     "lc1_label",
+    "gps_lat"
     
 ])
 # %%
@@ -310,4 +402,22 @@ selection=pd.merge(elevation_LUCAS_test[["point_id","be75"]],comparison_data[["p
 # %%
 import matplotlib.pyplot as plt
 plt.scatter(x=selection.be75,y=selection.elevation,s=0.1)
+# %%
+"""test"""
+correct_raster=rio.open(result_dir+"multi_band_raster/nuts_raster_2003.tif")
+# %%
+comparison_raster=rio.open(raw_dir+"mean_temperature_1987.tif")
+# %%
+comparison_raster.transform
+# %%
+correct_raster.transform
+# %%
+show(comparison_raster.read()[0])
+# %%
+"""unrelated tests"""
+cropdata=pd.read_csv(result_dir+"csv/filtered_regional_cropdata.csv")
+# %%
+cropdata[cropdata["3"]=="LEVL"]["2"].unique()
+# %%
+cropdata[(cropdata["3"]=="LEVL")&(cropdata["4"]==2010)&(cropdata["1"]=="DE")]
 # %%
