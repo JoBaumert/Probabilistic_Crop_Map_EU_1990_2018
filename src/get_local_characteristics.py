@@ -421,3 +421,16 @@ cropdata[cropdata["3"]=="LEVL"]["2"].unique()
 # %%
 cropdata[(cropdata["3"]=="LEVL")&(cropdata["4"]==2010)&(cropdata["1"]=="DE")]
 # %%
+"""CORINE"""
+corine_years=[1990,2000,2006,2012,2018]
+for year in corine_years:
+    corine_image=ee.Image('COPERNICUS/CORINE/V20/100m/'+str(year))
+    corine_image=corine_image.reproject(crs="epsg:3035",crsTransform=transform_list[:6])
+    geemap.ee_export_image_to_drive(
+                    corine_image, #here we call the function indicated by taskname
+                    folder="GEE_DGPCM_19902020",
+                    description="CORINE_"+str(year), 
+                    scale=1000,   
+                    region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
+                )
+# %%
