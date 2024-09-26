@@ -114,3 +114,6 @@ target/
 
 # Mypy cache
 .mypy_cache/
+
+#others
+/DGPCM_1990_2020/external_data/
