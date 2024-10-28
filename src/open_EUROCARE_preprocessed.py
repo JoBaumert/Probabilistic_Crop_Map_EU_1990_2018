@@ -4,10 +4,10 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 # %%
-main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
+main_path=str(Path(Path(os.path.abspath(__file__)).parents[0]))
 
 #%%
-data=pd.read_csv(main_path+"/data/preprocessed/filtered_final.csv")
+data=pd.read_csv(main_path+"/data/preprocessed/csv/filtered_final.csv")
 # %%
 
 data[data["3"]=="UAA"]
@@ -27,4 +27,6 @@ NUTS_regions
 
 # %%
 NUTS_regions
+# %%
+data
 # %%

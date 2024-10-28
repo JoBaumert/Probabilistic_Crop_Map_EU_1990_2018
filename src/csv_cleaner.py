@@ -1,9 +1,10 @@
+#%%
 import pandas as pd
 import numpy as np
 import gc
 import os
 from pathlib import Path
-
+#%%
 main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
 preprocessed_dir = main_path+"/data/preprocessed"
 os.makedirs(preprocessed_dir, exist_ok=True)
@@ -24,7 +25,7 @@ def to_table(element):
 
 datapath = "res_time_series_17/res_time_series_17.csv"
 output_file = "result_table.csv"
-
+#%%
 chunk_size = 1000000
 
 start_row = 0

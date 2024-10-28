@@ -8,7 +8,7 @@ import numpy as np
 import os
 from pathlib import Path
 # %%
-main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
+main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
 result_dir = os.path.join(main_path, "data/results/")
 os.makedirs(result_dir, exist_ok=True)
 raw_dir = main_path+"/data/raw/"
@@ -25,7 +25,8 @@ CAPRI_Eurostat_NUTS_mapping
 #%%
 filtered_regional_cropdata.rename(columns={"1":"CAPRI_code","2":"crop","3":"type","4":"year","5":"value"},inplace=True)
 CAPRI_Eurostat_NUTS_mapping.rename(columns={0:"CAPRI_code",1:"NUTS_ID",2:"-"},inplace=True)
-filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["type"]=="LEVL"]
+#filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["type"]=="LEVL"]
+filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["type"].isin(["LEVL","YILD","PROD"])]
 filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["year"]>=1990]
 #%%
 yearwise_nuts_regions=pd.read_csv(result_dir+"csv/yearwise_nuts_regions.csv")
@@ -72,4 +73,17 @@ relevant_cropdata[(relevant_cropdata["year"]==1990)&(relevant_cropdata["CAPRI_co
 # %%
 relevant_cropdata.to_csv(preprocessed_dir+"/csv/relevant_crop_data.csv")
 
+# %%
+data=pd.read_csv(main_path+"/DGPCM_1990_2020/data/preprocessed/csv/relevant_crop_data.csv")
+# %%
+data[data["country"]=="DE"]["NUTS_ID"].unique()
+# %%
+data_raw=pd.read_csv(main_path+"/DGPCM_1990_2020/data/preprocessed/csv/filtered_final.csv")
+# %%
+np.sort(data_raw["3"].unique())
+# %%
+relevant_cropdata.drop_duplicates()
+
+# %%
+relevant_cropdata
 # %%
