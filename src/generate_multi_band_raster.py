@@ -8,27 +8,39 @@ import numpy as np
 import os
 from pathlib import Path
 #%%
-main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
-result_dir = os.path.join(main_path, "data/results/")
-os.makedirs(result_dir, exist_ok=True)
-raw_dir = main_path+"/data/raw/"
-os.makedirs(raw_dir, exist_ok=True)
-preprocessed_dir = main_path+"/data/preprocessed/"
-os.makedirs(preprocessed_dir, exist_ok=True)
+main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+
+
+main_path=str(Path(Path(os.path.abspath(__file__)).parents[0]))
+data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+
+raw_dir = data_main_path+"/raw"
+preprocessed_dir = data_main_path+"/preprocessed"
+preprocessed_csv_dir=preprocessed_dir+"/csv/"
+preprocessed_raster_dir=preprocessed_dir+"/rasters/"
+os.makedirs(preprocessed_raster_dir, exist_ok=True)
+
+parameter_path=data_main_path+"/delineation_and_parameters/"
+user_parameter_path=parameter_path+"user_parameters.xlsx"
+
+
+
 # List of years to process
 years = [2003, 2006, 2010, 2013, 2016, 2021]
-
 #%%
-# Open the reference raster to get the transform and shape
-raster_src = rio.open(preprocessed_dir + "rasters/clipped_nuts_2018.tif")
-transform = raster_src.transform
-out_shape = raster_src.shape  
+geospatial_transformation=pd.read_excel(user_parameter_path,sheet_name="geospatial_transformation")
+#%%
+transform=tuple(np.array(geospatial_transformation["transform"]).astype(float))
+out_shape=tuple(np.array(geospatial_transformation["shape"][:2]).astype(int))
+#%%
 
 # DataFrame to store the combined dictionary for all years
 combined_df = pd.DataFrame()
+
+
 #%%
 for year in years:
-    file_path = os.path.join(raw_dir, f"nuts_shapedata/NUTS_RG_01M_{year}_3035.shp/NUTS_RG_01M_{year}_3035.shp")
+    file_path = raw_dir+"/nuts_shapedata/NUTS_RG_01M_"+str(year)+"_3035.shp/NUTS_RG_01M_"+str(year)+"_3035.shp"
     
     # Load the shapefile
     NUTS_shapefile = gpd.read_file(file_path, encoding='latin1')
@@ -57,27 +69,19 @@ for year in years:
             dtype='uint16'
         )
         bands.append(raster)
-    
-    # Update metadata and write multi-band raster
-    meta_output = raster_src.meta.copy()
-    meta_output.update(dtype='uint16', count=4, compress='lzw')
-    
-    raster_path = os.path.join(result_dir, f"multi_band_raster/nuts_raster_{year}.tif")
-    with rio.open(raster_path, 'w', **meta_output) as dst:
-        for i, band in enumerate(bands):
-            dst.write(band, i + 1)
-    
-    print(f"Multi-band raster for {year} saved at {raster_path}")
 
+    
+    with rio.open(preprocessed_raster_dir+"nuts_"+str(year)+".tif", 'w',
+                width=int(out_shape[1]),height=int(out_shape[0]),
+                transform=transform,count=4,dtype=rio.int16,crs="EPSG:3035") as dst:
+        dst.write(np.array(bands).astype(rio.int16))
+
+    print(f"Multi-band raster for {year} saved")
+
+#%%
 # Save the combined dictionary to a CSV file
-combined_df.to_csv(os.path.join(result_dir, "csv/nuts_regions_dictionary.csv"), index=False)
+combined_df.to_csv(preprocessed_csv_dir+"nuts_regions_dictionary.csv", index=False)
 
 
-# %% sanity check
-with rio.open(result_dir+'multi_band_raster/nuts_raster_2003.tif') as mbr:
-    show(mbr.read(1))
-    show(mbr.read(2))
-    show(mbr.read(3))
-    show(mbr.read(4))
 
 # %%

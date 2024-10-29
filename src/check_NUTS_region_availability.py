@@ -7,29 +7,33 @@ from rasterio import features
 import numpy as np
 import os
 from pathlib import Path
-# %%
+
+#%%
 main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
-result_dir = os.path.join(main_path, "data/results/")
-os.makedirs(result_dir, exist_ok=True)
-raw_dir = main_path+"/data/raw/"
-os.makedirs(raw_dir, exist_ok=True)
-preprocessed_dir = main_path+"/data/preprocessed/"
-os.makedirs(preprocessed_dir, exist_ok=True)
+data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+
+raw_dir = data_main_path+"/raw"
+preprocessed_dir = data_main_path+"/preprocessed"
+preprocessed_csv_dir=preprocessed_dir+"/csv/"
+preprocessed_raster_dir=preprocessed_dir+"/rasters/"
+os.makedirs(preprocessed_raster_dir, exist_ok=True)
+
+parameter_path=data_main_path+"/delineation_and_parameters/"
+user_parameter_path=parameter_path+"user_parameters.xlsx"
+
 
 # %%
-filtered_regional_cropdata=pd.read_csv(preprocessed_dir+"csv/filtered_final.csv")
-CAPRI_Eurostat_NUTS_mapping=pd.read_csv(raw_dir+"CAPRI_Eurostat_NUTS_mapping.csv",header=None)
+filtered_regional_cropdata=pd.read_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step1.csv",header=None)
+CAPRI_Eurostat_NUTS_mapping=pd.read_csv(parameter_path+"CAPRI_Eurostat_NUTS_mapping.csv",header=None)
 #%%
-CAPRI_Eurostat_NUTS_mapping
 
-#%%
-filtered_regional_cropdata.rename(columns={"1":"CAPRI_code","2":"crop","3":"type","4":"year","5":"value"},inplace=True)
+filtered_regional_cropdata.rename(columns={0:"CAPRI_code",1:"crop",2:"type",3:"year",4:"value"},inplace=True)
+
 CAPRI_Eurostat_NUTS_mapping.rename(columns={0:"CAPRI_code",1:"NUTS_ID",2:"-"},inplace=True)
-#filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["type"]=="LEVL"]
-filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["type"].isin(["LEVL","YILD","PROD"])]
+filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["type"].isin(["LEVL"])]
 filtered_regional_cropdata=filtered_regional_cropdata[filtered_regional_cropdata["year"]>=1990]
 #%%
-yearwise_nuts_regions=pd.read_csv(result_dir+"csv/yearwise_nuts_regions.csv")
+yearwise_nuts_regions=pd.read_csv(preprocessed_csv_dir+"yearwise_nuts_regions_overview.csv")
 
 #%%
 all_years_all_regions=pd.DataFrame()
@@ -62,8 +66,7 @@ all_years_all_regions["NUTS_level"]=np.char.str_len(np.array(all_years_all_regio
 
 #a=all_years_all_regions[["year","country","NUTS_level"]].groupby(["year","country"]).max().reset_index()
 #relevant_regions=pd.merge(a,all_years_all_regions,how="left",on=["year","country","NUTS_level"])
-#%%
-all_years_all_regions
+
 #%%
 relevant_cropdata=pd.merge(all_years_all_regions,filtered_regional_cropdata,how="left",on=["CAPRI_code","year"])
 
@@ -71,19 +74,7 @@ relevant_cropdata=pd.merge(all_years_all_regions,filtered_regional_cropdata,how=
 """IMPORTANT: some regions were split over time, so that 'CAPRI_code' is matched with more than one 'NUTS_ID', e.g., see the following example:"""
 relevant_cropdata[(relevant_cropdata["year"]==1990)&(relevant_cropdata["CAPRI_code"]=="IT310000")]
 # %%
-relevant_cropdata.to_csv(preprocessed_dir+"/csv/relevant_crop_data.csv")
+relevant_cropdata.to_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step2.csv")
 
-# %%
-data=pd.read_csv(main_path+"/DGPCM_1990_2020/data/preprocessed/csv/relevant_crop_data.csv")
-# %%
-data[data["country"]=="DE"]["NUTS_ID"].unique()
-# %%
-data_raw=pd.read_csv(main_path+"/DGPCM_1990_2020/data/preprocessed/csv/filtered_final.csv")
-# %%
-np.sort(data_raw["3"].unique())
-# %%
-relevant_cropdata.drop_duplicates()
 
-# %%
-relevant_cropdata
 # %%

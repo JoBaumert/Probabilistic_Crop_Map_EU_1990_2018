@@ -5,11 +5,25 @@ from pathlib import Path
 import os 
 from tqdm import tqdm
 
-main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
-result_dir = main_path+"/data/results/"
-os.makedirs(result_dir, exist_ok=True)
-preprocessed_dir = main_path+"/data/preprocessed/"
-os.makedirs(preprocessed_dir, exist_ok=True)
+#main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
+#result_dir = main_path+"/data/results/"
+#os.makedirs(result_dir, exist_ok=True)
+#preprocessed_dir = main_path+"/data/preprocessed/"
+#os.makedirs(preprocessed_dir, exist_ok=True)
+
+
+#%%
+main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+
+raw_dir = data_main_path+"/raw"
+preprocessed_dir = data_main_path+"/preprocessed"
+preprocessed_csv_dir=preprocessed_dir+"/csv/"
+preprocessed_raster_dir=preprocessed_dir+"/rasters/"
+os.makedirs(preprocessed_raster_dir, exist_ok=True)
+
+parameter_path=data_main_path+"/delineation_and_parameters/"
+user_parameter_path=parameter_path+"user_parameters.xlsx"
 
 # %% find unique years for unique nuts ids in combined csv
 def create_yearwise_table_filtered_timeseries(regional_cropdata_df):
@@ -24,7 +38,7 @@ def create_yearwise_table_filtered_timeseries(regional_cropdata_df):
     result_df.reset_index(inplace=True)
     result_df.rename(columns={'index': 'nuts_code'}, inplace=True)
 
-    result_df.to_csv(result_dir+'csv/yearwise_regional_cropdata.csv', index=False)
+    result_df.to_csv(preprocessed_csv_dir+'yearwise_regional_cropdata_overview.csv', index=False)
 
 
 # %% find unique years for unique nuts ids in combined csv
@@ -41,27 +55,19 @@ def create_yearwise_table_nuts_region_dictionary(nuts_regions_dictionary_df):
     result_df.reset_index(inplace=True)
     result_df.rename(columns={'index': 'NUTS_ID'}, inplace=True)
 
-    result_df.to_csv(result_dir+'csv/yearwise_nuts_regions.csv', index=False)
+    result_df.to_csv(preprocessed_csv_dir+'yearwise_nuts_regions_overview.csv', index=False)
 #%%
 
 if __name__ == '__main__':
     # load preprocessed data
-    regional_cropdata = pd.read_csv(result_dir+'csv/filtered_regional_cropdata.csv', header=None)
-    nuts_regions_dictionary = pd.read_csv(result_dir+'csv/nuts_regions_dictionary.csv')
-    
+    regional_cropdata = pd.read_csv(preprocessed_csv_dir+'preprocessed_CAPREG_step1.csv', header=None)
+    nuts_regions_dictionary = pd.read_csv(preprocessed_csv_dir+'nuts_regions_dictionary.csv')
+    #%%
+    regional_cropdata
     #%% create yearwise csv files
     create_yearwise_table_filtered_timeseries(regional_cropdata)
     #%%
     create_yearwise_table_nuts_region_dictionary(nuts_regions_dictionary)
-
-    #%% sanity check - yearwise table for cropdata and nuts regions
-
-    cropdata_df = pd.read_csv(result_dir+'csv/yearwise_regional_cropdata.csv')
-    cropdata_df.head()
-    # sanity check - yearwise table for nuts regions
-    nuts_df = pd.read_csv(result_dir+'csv/yearwise_nuts_regions.csv')
-    nuts_df.head()
-
 
 
 # %%

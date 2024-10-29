@@ -1,1 +1,1 @@
-/fdiexchange/baumert/DGPCM_19902020/Data/data
+/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/data

@@ -8,13 +8,33 @@ from collections import Counter
 from rasterio.mask import mask
 from tqdm import tqdm
 from shapely.geometry import box
+import sys
+sys.path.append(
+    str(Path(Path(os.path.abspath(__file__)).parents[0]))+"/src/"
+)
+
 from utils.preprocess_raster import read_raster, preprocess, filter_raster
 import os
+#%%
 
-corine_data_path = "data/raw/corine"
-nuts_data_path = Path('data/raw/NUTS2_2016_raster.tif')
-preprocessed_data_path = "data/preprocessed/"
-result_data_path = "data/results/"
+#%%
+#nuts_data_path = Path('data/raw/NUTS2_2016_raster.tif')
+#preprocessed_data_path = "data/preprocessed/"
+#result_data_path = "data/results/"
+#%%
+main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+
+raw_dir = data_main_path+"/raw"
+preprocessed_dir = data_main_path+"/preprocessed"
+preprocessed_csv_dir=preprocessed_dir+"/csv/"
+preprocessed_raster_dir=preprocessed_dir+"/rasters/"
+os.makedirs(preprocessed_raster_dir, exist_ok=True)
+
+parameter_path=data_main_path+"/delineation_and_parameters/"
+user_parameter_path=parameter_path+"user_parameters.xlsx"
+
+
 
 agri_class_codes = [12, 13, 14, 15, 16, 17, 18, 19, 20, 22]
 
@@ -68,4 +88,11 @@ if __name__ == "__main__":
 
 
 
+#%%
 
+test=rio.open("/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/data/raw/corine/2012.tif")
+# %%
+test.transform
+# %%
+test.shape
+# %%

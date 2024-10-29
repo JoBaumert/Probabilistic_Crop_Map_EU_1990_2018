@@ -5,15 +5,23 @@ import gc
 import os
 from pathlib import Path
 #%%
-main_path=str(Path(Path(os.path.abspath(__file__)).parents[1]))
-preprocessed_dir = main_path+"/data/preprocessed"
+main_path=str(Path(Path(os.path.abspath(__file__)).parents[0]))
+data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+#%%
+raw_dir = data_main_path+"/raw"
+os.makedirs(raw_dir, exist_ok=True)
+
+preprocessed_dir = data_main_path+"/preprocessed"
 os.makedirs(preprocessed_dir, exist_ok=True)
 
-#%% strip trailing zeros from NUTS column of time series dataset
-def strip_zeros():
-    filtered = pd.read_csv(preprocessed_dir+'filtered_final.csv', header=None)
-    filtered[0] = filtered[0].astype(str).str.rstrip('0').replace('', '0')
-    filtered.to_csv('filtered_new.csv', index=False, header=False)
+csv_output_dir=preprocessed_dir+"/csv/"
+os.makedirs(csv_output_dir, exist_ok=True)
+
+input_path = raw_dir+"/res_time_series_17.csv"
+output_file = csv_output_dir+"preprocessed_CAPREG_step1.csv"
+
+parameter_path=data_main_path+"/delineation_and_parameters/"
+crop_delineation_path=parameter_path+"DGPCM_crop_delineation.xlsx"
 
     
 def to_table(element):
@@ -23,45 +31,30 @@ def to_table(element):
     except IndexError:
         return None
 
-datapath = "res_time_series_17/res_time_series_17.csv"
-output_file = "result_table.csv"
+
 #%%
+crop_delineation=pd.read_excel(crop_delineation_path,sheet_name="CAPRI_crop_names")
 chunk_size = 1000000
 
 start_row = 0
-with open(datapath, 'r') as file:
+with open(input_path, 'r') as file:
     for i, line in enumerate(file):
         if line.startswith("'"):
             start_row = i
             break
 
 
-if os.path.exists(output_file):
 
-    with open(output_file, 'rb') as f:
-        f.seek(-2, os.SEEK_END)  
-        while f.read(1) != b'\n':  
-            f.seek(-2, os.SEEK_CUR)  
-        last_line = f.readline().decode()
-
-    
-    last_processed = last_line.strip().split(',')
-    last_processed_str = f"'{last_processed[0]}'.'{last_processed[1]}'.'{last_processed[2]}'.'{last_processed[3]}'{last_processed[4]}"
-    
-    
-    with open(datapath, 'r') as file:
-        for i, line in enumerate(file):
-            if line.strip() == last_processed_str:
-                start_row = i + 1  
-                break
-else:
-    start_row = 0
-
-
+chunk=0
+#will take 10-15 minutes
 while True:
     
-    data = pd.read_csv(datapath, skiprows=start_row, nrows=chunk_size, header=None)
     
+    print("chunk "+str(chunk))
+    try:
+        data = pd.read_csv(input_path, skiprows=start_row, nrows=chunk_size, header=None)
+    except:
+        break
     
     if data.empty:
         break
@@ -74,8 +67,11 @@ while True:
         break
     
     
-    data_df = pd.DataFrame(data_array, columns=['part1', 'part2', 'part3', 'part4', 'value'])
-    
+    data_df = pd.DataFrame(data_array, columns=["CAPRI_code","crop","type","year","value"])
+    #select relevant types
+    data_df=data_df[data_df["type"].isin(["LEVL","YILD","PROD"])]
+    #select relevant production (i.e., the relevant crops)
+    data_df=data_df[data_df["crop"].isin(np.array(crop_delineation["crop"]))]
     
     if start_row == 0:
         data_df.to_csv(output_file, index=False, mode='w', header=True)
@@ -84,12 +80,20 @@ while True:
     
     
     start_row += chunk_size
-    
+   
+    chunk+=1
     
     del data
     del data_df
     gc.collect()
 
-print("Processing complete!")
+print("Processing complete")
 
 
+
+# %%
+test=pd.read_csv(output_file,header=None)
+
+#%%
+test
+# %%
