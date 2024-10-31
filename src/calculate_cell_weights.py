@@ -10,17 +10,7 @@ from pathlib import Path
 from src.utils.preprocess_crop_data import cluster_crop_names
 
 #%%
-#main_path_data_external="/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/raw/GEE_DGPCM/"
-#raw_data_path=main_path_data_external+"Raw_Data/"
-#delineation_and_parameter_path=main_path_data_external+"delineation_and_parameters/"
-#main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
-#result_dir = os.path.join(main_path, "data/results/")
-#os.makedirs(result_dir, exist_ok=True)
-#raw_dir = main_path+"/data/raw/"
-#os.makedirs(raw_dir, exist_ok=True)
-#preprocessed_dir = main_path+"/data/preprocessed/"
-#os.makedirs(preprocessed_dir, exist_ok=True)
-#%%
+
 main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
 data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
 
@@ -32,8 +22,7 @@ os.makedirs(preprocessed_raster_dir, exist_ok=True)
 
 parameter_path=data_main_path+"/delineation_and_parameters/"
 user_parameter_path=parameter_path+"user_parameters.xlsx"
-#TODO: change the following path according to system
-GEE_data_path="/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/raw/GEE_DGPCM/Raw_Data/"
+GEE_data_path=raw_dir+"/GEE/"
 
 #%%
 nuts_regions_dictionary=pd.read_csv(preprocessed_csv_dir+"nuts_regions_dictionary.csv")
@@ -82,7 +71,7 @@ uaa_calculated_allyears=pd.DataFrame()
 weight_raster_allyears=np.ndarray(corine_preprocessed_19902018.shape)
 nuts_indices_relevant_allyears=np.ndarray(corine_preprocessed_19902018.shape)
 uaa_raster_relevant_allyears=np.ndarray(corine_preprocessed_19902018.shape)
-
+relevant_cropdata_allyears=pd.DataFrame()
 
 for j,year in enumerate(years):
     print(year)
@@ -187,6 +176,7 @@ for j,year in enumerate(years):
     relevant_cropdata.drop_duplicates(subset=["CAPRI_code","DGPCM_crop_code"],inplace=True)
    
     relevant_cropdata.drop("NUTS_ID",axis=1,inplace=True)
+    relevant_cropdata_allyears=pd.concat((relevant_cropdata_allyears,relevant_cropdata))
 
     """CALCULATE UAA FROM CAPRI AND CORINE"""
     uaa_calculated=relevant_cropdata[["CAPRI_code","year","country","value"]].groupby(
@@ -250,7 +240,9 @@ for j,year in enumerate(years):
     nuts_indices_relevant_allyears[j]=nuts_indices_relevant
     uaa_raster_relevant_allyears[j]=uaa_raster_relevant
 # %%
-np.unique(nuts_indices_relevant_allyears[0]).astype(int)
+relevant_cropdata_allyears[(relevant_cropdata_allyears["CAPRI_code"]=="DEA10000")&(relevant_cropdata_allyears["DGPCM_crop_code"]=="MAIZ")]
+#%%
+relevant_cropdata_allyears[relevant_cropdata_allyears["country"]=="DE"]["CAPRI"]
 #%%
 show(np.where(weight_raster_allyears[20]>0,1,0))
 # %%
@@ -278,5 +270,5 @@ with rio.open(preprocessed_raster_dir+"uaa_raster_allyears.tif", 'w',
             transform=transform,count=uaa_raster_relevant_allyears.shape[0],dtype=rio.float32,crs="EPSG:3035") as dst:
     dst.write(uaa_raster_relevant_allyears)
 # %%
-
+relevant_cropdata_allyears.to_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step3.csv")
 # %%
