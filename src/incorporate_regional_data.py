@@ -61,28 +61,25 @@ nuts_indices=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.ti
 uaa_allyears=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
 # %%
 regs=np.unique(CAPREG_data[(CAPREG_data["country"]==country)&(CAPREG_data["year"]==year)]["CAPRI_code"])
-considered_crops_country_year=np.load(prior_proba_output_dir+country+"_"+str(year)+"_considered_crops.npy",allow_pickle=True)
+considered_crops_country_year=np.load(prior_proba_output_dir+str(year)+"/"+country+"_"+str(year)+"_considered_crops.npy",allow_pickle=True)
 #%%
-reg="DEA20000"
+reg="DEA50000"
 index=uaa_allyears[(uaa_allyears["year"]==year)&(uaa_allyears["CAPRI_code"]==reg)]["index"].iloc[0]
 region_indices=np.where(nuts_indices[np.where(all_years==year)[0][0]]==index)
 weight_array=cellweight[np.where(all_years==year)[0][0]][region_indices]
 
 #%%
-
-
-#%%
 CAPREG_regional_data=CAPREG_data[(CAPREG_data["CAPRI_code"]==reg)&(CAPREG_data["year"]==year)]
 true_croparea_region=np.array(CAPREG_regional_data["value"])*10
 # %%
-prior_probas=np.load(prior_proba_output_dir+reg+"_"+str(year)+".npy")
+prior_probas=np.load(prior_proba_output_dir+str(year)+"/"+reg+"_"+str(year)+".npy")
 #%%
 C=len(CAPREG_regional_data)
 I=prior_probas.shape[1]
 
 #%%
 weight_array_long=np.repeat(weight_array,C)
-beta=0
+beta=7
 priorprob_relevant=prior_probas[beta].T
 
 priorprob_relevant_corrected=np.zeros((C,I))
@@ -96,10 +93,8 @@ priorprob_relevant_corrected = np.array([p_cell / p_cell.sum() for p_cell in pri
 q=priorprob_relevant_corrected.flatten()
 q_log=np.log(q)
 
-# %%
-q_log
-# %%
-priorprob_relevant_corrected.shape
+
+
 # %%
 def complete_obj_function(x):
     return jnp.log(
@@ -163,7 +158,7 @@ def regional_crop_deviation(x):
 
 def evaluate_quality(x):
     max_dev_list = []
-    max_dev = (abs(regional_crop_deviation(p_result))/true_croparea_region.sum()).max()
+    max_dev = (abs(regional_crop_deviation(x))/true_croparea_region.sum()).max()
     print(f"maximal relative_deviation from regional data: {max_dev}")
     max_dev_list.append(max_dev)
 
@@ -173,43 +168,42 @@ def evaluate_quality(x):
     r2 = r2_score(q, x)
     print(f"R2 score: {r2}")
     return max_dev_list, max_cell_dev, r2
-# %%
-q.shape
-# %%
-x=q
-complete_obj_function(x)
 
-# %%
-combined_constraints(x)
-# %%
-priorprob_relevant_corrected.shape
-# %%
-x_test=np.tile((true_croparea_region/true_croparea_region.sum()),I).reshape(I,C).flatten()
-# %%
-complete_obj_function(x_test)
+
 # %%
 p_init=q
+evaluate_quality(p_init)
+#%%
 penalty_adjusted = False
 
-obj_function_factor,penalty_cell,penalty_region=1,50,0.5
-
+#obj_function_factor,penalty_cell,penalty_region=0.1,10e2,1
+obj_function_factor,penalty_cell,penalty_region=0.5,10e2,0.5
 
 #while not penalty_adjusted:
 box_lower = jnp.zeros_like(p_init)
 box_upper = jnp.ones_like(p_init)
 proj_params = (box_lower, box_upper)
 
-max_iter = 100000
+#max_iter = 200
+max_iter=10000
 result = run_optimization_problem(
     maxiter_optimization=max_iter,p_init=p_init
 )
 
 p_result = result.params
 
-# %%
+
+#%%
 evaluate_quality(p_result)
 # %%
+complete_obj_function(p_result)
+#%%
+obj_function(p_result)
 
+#%%
+regional_constraint(p_result)
+#%%
+cell_constraint(p_init)
 # %%
 x=p_result
 x_reshaped = x.reshape(I,C).transpose()
@@ -225,5 +219,7 @@ plt.hist(t)
 # %%
 x.sum(axis=1)
 # %%
-plt.scatter(p_result,q)
+plt.scatter(p_result,q,s=0.1)
+# %%
+p_result
 # %%
