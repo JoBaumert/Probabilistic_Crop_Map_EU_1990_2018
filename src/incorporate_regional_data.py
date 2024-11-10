@@ -34,11 +34,17 @@ import warnings
 import gc
 import rasterio as rio
 # %%
-year,country=1990,"DE"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 all_years=np.arange(1990,2019)
+deviation_tolerance_region = 0.01
+deviation_tolerance_cells = 0.001
 #%%
-main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
-data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+try:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+except:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
 
 raw_dir = data_main_path+"/raw"
 preprocessed_dir = data_main_path+"/preprocessed"
@@ -49,52 +55,13 @@ results_dir=data_main_path+"/results"
 os.makedirs(results_dir, exist_ok=True)
 prior_proba_output_dir=results_dir+"/numpy_arrays/prior_crop_probas/"
 os.makedirs(prior_proba_output_dir, exist_ok=True)
+posterior_proba_output_dir=results_dir+"/numpy_arrays/posterior_crop_probas/"
+os.makedirs(posterior_proba_output_dir,exist_ok=True)
 resulting_parameters_dir=results_dir+"/csv/estimation_parameters_and_scalers/"
 os.makedirs(resulting_parameters_dir, exist_ok=True)
 parameter_path=data_main_path+"/delineation_and_parameters/"
 user_parameter_path=parameter_path+"user_parameters.xlsx"
 GEE_data_path=raw_dir+"/GEE/"
-# %%
-CAPREG_data=pd.read_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step3.csv")
-cellweight=rio.open(preprocessed_raster_dir+"cellweight_raster_allyears.tif").read()
-nuts_indices=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").read()
-uaa_allyears=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
-# %%
-regs=np.unique(CAPREG_data[(CAPREG_data["country"]==country)&(CAPREG_data["year"]==year)]["CAPRI_code"])
-considered_crops_country_year=np.load(prior_proba_output_dir+str(year)+"/"+country+"_"+str(year)+"_considered_crops.npy",allow_pickle=True)
-#%%
-reg="DEA50000"
-index=uaa_allyears[(uaa_allyears["year"]==year)&(uaa_allyears["CAPRI_code"]==reg)]["index"].iloc[0]
-region_indices=np.where(nuts_indices[np.where(all_years==year)[0][0]]==index)
-weight_array=cellweight[np.where(all_years==year)[0][0]][region_indices]
-
-#%%
-CAPREG_regional_data=CAPREG_data[(CAPREG_data["CAPRI_code"]==reg)&(CAPREG_data["year"]==year)]
-true_croparea_region=np.array(CAPREG_regional_data["value"])*10
-# %%
-prior_probas=np.load(prior_proba_output_dir+str(year)+"/"+reg+"_"+str(year)+".npy")
-#%%
-C=len(CAPREG_regional_data)
-I=prior_probas.shape[1]
-
-#%%
-weight_array_long=np.repeat(weight_array,C)
-beta=7
-priorprob_relevant=prior_probas[beta].T
-
-priorprob_relevant_corrected=np.zeros((C,I))
-
-for c,crop in enumerate(considered_crops_country_year):
-    corrected_position=np.where(CAPREG_regional_data["DGPCM_crop_code"]==crop)[0][0]
-    priorprob_relevant_corrected[corrected_position]=priorprob_relevant[c]
-
-priorprob_relevant_corrected = np.where(priorprob_relevant_corrected <= 0.000001, 0.000001, priorprob_relevant_corrected)
-priorprob_relevant_corrected = np.array([p_cell / p_cell.sum() for p_cell in priorprob_relevant_corrected.T])
-q=priorprob_relevant_corrected.flatten()
-q_log=np.log(q)
-
-
-
 # %%
 def complete_obj_function(x):
     return jnp.log(
@@ -153,73 +120,283 @@ def regional_crop_deviation(x):
     weighted_aggregated_crops = weighted_crops.sum(axis=1)
     return weighted_aggregated_crops-true_croparea_region
 
-    
-
-
 def evaluate_quality(x):
-    max_dev_list = []
-    max_dev = (abs(regional_crop_deviation(x))/true_croparea_region.sum()).max()
-    print(f"maximal relative_deviation from regional data: {max_dev}")
-    max_dev_list.append(max_dev)
+    max_reg_dev = (abs(regional_crop_deviation(x))/true_croparea_region.sum()).max()
+    print(f"maximal relative_deviation from regional data: {max_reg_dev}")
 
     max_cell_dev = max_cell_deviation(x)
     print(f"maximal cell deviation: {max_cell_dev}")
 
     r2 = r2_score(q, x)
     print(f"R2 score: {r2}")
-    return max_dev_list, max_cell_dev, r2
+    return max_reg_dev, max_cell_dev, r2
 
+def adjust_penalty(
+    max_reg_dev,
+    deviation_tolerance_region,
+    max_cell_dev,
+    deviation_tolerance_cells,
+    penalty_reg,
+    penalty_cell,
+):
+    # set default for penalty adjusted to false and only change if adjustment is sufficient
+    penalty_adjusted = False
+    if (np.max(max_reg_dev) <= deviation_tolerance_region) & (
+        max_cell_dev < deviation_tolerance_cells
+    ):
+        penalty_adjusted = True
+    elif (np.max(max_reg_dev) <= deviation_tolerance_region) & (
+        max_cell_dev > deviation_tolerance_cells
+    ):
+        penalty_cell = penalty_cell * 2 #5
 
-# %%
-p_init=q
-evaluate_quality(p_init)
+    elif  (np.max(max_reg_dev) > deviation_tolerance_region) & (
+        max_cell_dev <= deviation_tolerance_cells
+    ):
+        penalty_reg=penalty_reg+0.05
+        #penalty_cell = penalty_cell * 2
+    
+    else:
+        penalty_cell = penalty_cell * 2
+        penalty_reg=penalty_reg+0.05
+
+    return (
+        penalty_reg,
+        penalty_cell,
+        penalty_adjusted,
+    )
+
+def set_up_optimization_problem(beta):
+    priorprob_relevant=prior_probas[beta].T
+
+    priorprob_relevant_corrected=np.zeros((C,I))
+
+    for c,crop in enumerate(considered_crops_country_year):
+        corrected_position=np.where(CAPREG_regional_data["DGPCM_crop_code"]==crop)[0][0]
+        priorprob_relevant_corrected[corrected_position]=priorprob_relevant[c]
+
+    priorprob_relevant_corrected = np.where(priorprob_relevant_corrected <= 0.000001, 0.000001, priorprob_relevant_corrected)
+    priorprob_relevant_corrected = np.array([p_cell / p_cell.sum() for p_cell in priorprob_relevant_corrected.T])
+    q=priorprob_relevant_corrected.flatten()
+    q_log=np.log(q)
+    p_init=q
+    return (
+        p_init,
+        q,
+        q_log
+    )
+
 #%%
-penalty_adjusted = False
+CAPREG_data=pd.read_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step3.csv")
+cellweight=rio.open(preprocessed_raster_dir+"cellweight_raster_allyears.tif").read()
+nuts_indices=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").read()
+uaa_allyears=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
+#%%
+if __name__ == "__main__":
+    for year in all_years[11:22]:
+        #year=1995
+        all_countries=np.unique(CAPREG_data[CAPREG_data["year"]==year]["country"])
 
-#obj_function_factor,penalty_cell,penalty_region=0.1,10e2,1
-obj_function_factor,penalty_cell,penalty_region=0.5,10e2,0.5
 
-#while not penalty_adjusted:
-box_lower = jnp.zeros_like(p_init)
-box_upper = jnp.ones_like(p_init)
-proj_params = (box_lower, box_upper)
+        for country in all_countries:
+            
 
-#max_iter = 200
-max_iter=10000
-result = run_optimization_problem(
-    maxiter_optimization=max_iter,p_init=p_init
-)
+            regs=np.unique(CAPREG_data[(CAPREG_data["country"]==country)&(CAPREG_data["year"]==year)]["CAPRI_code"])
+            considered_crops_country_year=np.load(prior_proba_output_dir+str(year)+"/"+country+"_"+str(year)+"_considered_crops.npy",allow_pickle=True)
 
-p_result = result.params
+            for reg in regs:
 
+
+                print(reg+" "+str(year))
+                index=uaa_allyears[(uaa_allyears["year"]==year)&(uaa_allyears["CAPRI_code"]==reg)]["index"].iloc[0]
+                region_indices=np.where(nuts_indices[np.where(all_years==year)[0][0]]==index)
+                weight_array=cellweight[np.where(all_years==year)[0][0]][region_indices]
+
+                CAPREG_regional_data=CAPREG_data[(CAPREG_data["CAPRI_code"]==reg)&(CAPREG_data["year"]==year)]
+                true_croparea_region=np.array(CAPREG_regional_data["value"])*10
+                
+                prior_probas=np.load(prior_proba_output_dir+str(year)+"/"+reg+"_"+str(year)+".npy")
+
+
+                C=len(CAPREG_regional_data)
+                I=prior_probas.shape[1]
+                result_array=np.ndarray((prior_probas.shape[0],I,C))
+                weight_array_long=np.repeat(weight_array,C)
+
+                #%%
+                beta=0
+                p_init,q,q_log=set_up_optimization_problem(beta)
+
+                penalty_adjusted = False
+
+                #obj_function_factor,penalty_cell,penalty_region=0.1,10e2,1
+                obj_function_factor,penalty_cell,penalty_region=1,10e2,0.05
+
+                while not penalty_adjusted:
+                    box_lower = jnp.zeros_like(p_init)
+                    box_upper = jnp.ones_like(p_init)
+                    proj_params = (box_lower, box_upper)
+
+                    #max_iter = 200
+                    max_iter=10000
+                    result = run_optimization_problem(
+                        maxiter_optimization=max_iter,p_init=p_init
+                    )
+
+                    p_result = result.params
+                    print("deviations of posterior crop probabilities:")
+                    max_reg_dev,max_cell_dev,r2=evaluate_quality(p_result)
+                    print("deviations of prior crop probabilities:")
+                    max_reg_dev_init,max_cell_dev_init,r2_init=evaluate_quality(p_init)
+                    
+                    if (
+                        np.array(
+                            (penalty_cell,
+                            penalty_region)
+                        ).max()
+                        <10e10
+                    ):# to avoid numerical overflow:
+                        (
+                            penalty_region,
+                            penalty_cell,
+                            penalty_adjusted
+                        ) = adjust_penalty(max_reg_dev,
+                                        deviation_tolerance_region,
+                                        max_cell_dev,
+                                        deviation_tolerance_cells,
+                                        penalty_region,
+                                        penalty_cell)
+
+                    else:
+                        penalty_adjusted=True
+
+                p_final=p_result
+
+                optimization_hyperparameter_results_dict = {
+                    "beta": [],
+                    "max_iter": [],
+                    "penalty_reg":[],
+                    "penalty_cell": [],
+                    "max_dev_reg": [],
+                    "max_cell_dev": [],
+                    "r2": [],
+                }
+
+                optimization_hyperparameter_results_dict["beta"].append(beta)
+                optimization_hyperparameter_results_dict["max_iter"].append(max_iter)
+                optimization_hyperparameter_results_dict["penalty_reg"].append(
+                    penalty_region
+                )
+                optimization_hyperparameter_results_dict["penalty_cell"].append(penalty_cell)
+                optimization_hyperparameter_results_dict["max_dev_reg"].append(float(max_reg_dev))
+                optimization_hyperparameter_results_dict["max_cell_dev"].append(float(max_cell_dev))
+                optimization_hyperparameter_results_dict["r2"].append(r2)
+
+                p_final=p_final.reshape(I,C)
+                result_array[beta]=p_final
+
+                min_penalty_region = penalty_region
+                min_penalty_cell = penalty_cell
+
+                for beta in range(1,prior_probas.shape[0]):
+                    penalty_cell=min_penalty_cell
+                    penalty_region=min_penalty_region
+                    print("solving optimization problem for beta "+str(beta))
+                    p_init,q,q_log=set_up_optimization_problem(beta)
+                    penalty_adjusted=False
+                    while not penalty_adjusted:
+                        result = run_optimization_problem(
+                            maxiter_optimization=max_iter,p_init=p_init
+                        )
+
+                        p_result = result.params
+                        print("deviations of posterior crop probabilities:")
+                        max_reg_dev,max_cell_dev,r2=evaluate_quality(p_result)
+                        print("deviations of prior crop probabilities:")
+                        max_reg_dev_init,max_cell_dev_init,r2_init=evaluate_quality(p_init)
+                            
+                        if (
+                            np.array(
+                                (penalty_cell,
+                                penalty_region)
+                            ).max()
+                            <10e10
+                        ):# to avoid numerical overflow:
+                            (
+                                penalty_region,
+                                penalty_cell,
+                                penalty_adjusted
+                            ) = adjust_penalty(max_reg_dev,
+                                            deviation_tolerance_region,
+                                            max_cell_dev,
+                                            deviation_tolerance_cells,
+                                            penalty_region,
+                                            penalty_cell)
+
+                        else:
+                            penalty_adjusted=True
+
+                    optimization_hyperparameter_results_dict["beta"].append(beta)
+                    optimization_hyperparameter_results_dict["max_iter"].append(max_iter)
+                    optimization_hyperparameter_results_dict["penalty_reg"].append(
+                        penalty_region
+                    )
+                    optimization_hyperparameter_results_dict["penalty_cell"].append(penalty_cell)
+                    optimization_hyperparameter_results_dict["max_dev_reg"].append(float(max_reg_dev))
+                    optimization_hyperparameter_results_dict["max_cell_dev"].append(float(max_cell_dev))
+                    optimization_hyperparameter_results_dict["r2"].append(r2)
+
+                    p_final=p_final.reshape(I,C)
+                    result_array[beta]=p_final
+
+                #export results
+
+                print("export results...")
+                os.makedirs(posterior_proba_output_dir+str(year)+"/", exist_ok=True)
+                np.save(posterior_proba_output_dir+str(year)+"/"+reg+"_"+str(year)+".npy",
+                        result_array)
+                np.save(posterior_proba_output_dir+str(year)+"/"+reg+"_"+str(year)+"_hyperparams.npy",
+                        np.array(pd.DataFrame(optimization_hyperparameter_results_dict)))
+
+
+                #delete variables to free memory
+                del region_indices
+                del weight_array
+                del weight_array_long
+                del result_array
+                del p_final
+                del prior_probas
+                del p_init
+                gc.collect()
+                jax.clear_caches()
 
 #%%
-evaluate_quality(p_result)
-# %%
-complete_obj_function(p_result)
-#%%
-obj_function(p_result)
+#x=p_result
+#x_reshaped = x.reshape(I,C).transpose()
+#weighted_crops = jnp.multiply(weight_array, x_reshaped)
 
 #%%
-regional_constraint(p_result)
+#plt.scatter(weighted_crops.sum(axis=1),true_croparea_region)
+
+#plt.scatter(p_result,q,s=0.1)
+# %%
+
 #%%
-cell_constraint(p_init)
+"""visualize"""
+#beta=5
+#crop="GRAS"
+#x_min=region_indices[1].min()
+#x_max=region_indices[1].max()
+#y_min=region_indices[0].min()
+#y_max=region_indices[0].max()#
+#
+#test=np.zeros(((y_max-y_min+1),(x_max-x_min+1)))
+#probas=result_array[beta]
+#
+#c=np.where(np.array(CAPREG_regional_data["DGPCM_crop_code"])==crop)[0][0]
+#test[tuple(np.array([region_indices[0]-y_min,region_indices[1]-x_min]))]=probas.T[c]#
+#
+#show(test)
 # %%
-x=p_result
-x_reshaped = x.reshape(I,C).transpose()
-weighted_crops = jnp.multiply(weight_array, x_reshaped)
-# %%
-plt.scatter(weighted_crops.sum(axis=1),true_croparea_region)
-# %%
-x=p_result
-x = x.reshape(I, C)
-t=x.sum(axis=1) - jnp.ones(I)
-# %%
-plt.hist(t)
-# %%
-x.sum(axis=1)
-# %%
-plt.scatter(p_result,q,s=0.1)
-# %%
-p_result
+
 # %%
