@@ -9,6 +9,7 @@ import numpy as np
 import os
 from pathlib import Path
 from shapely.geometry import Point
+from rasterio.windows import from_bounds
 # %%
 try:
     main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
@@ -34,105 +35,140 @@ parameter_path=data_main_path+"/delineation_and_parameters/"
 user_parameter_path=parameter_path+"user_parameters.xlsx"
 GEE_data_path=raw_dir+"/GEE/"
 # %%
-def generate_random_results(proba,n_fields,postsampling_reps,target_shape,weights_matrix,beta=0):
+
+def generate_random_results(proba,n_of_fields_country,n_samples_aleatoric):
     proba_corrected=np.where(proba==0,0.0000001,proba)
     proba_corrected=(proba_corrected*(1/(proba_corrected.sum(axis=0)+0.000001))).T
 
     random_results=np.array(
         [
-            np.random.multinomial(n_fields[i],proba_corrected[i],100)
-            /n_fields[i]
+            np.random.multinomial(n_of_fields_country[i],proba_corrected[i],100)
+            /n_of_fields_country[i]
             for i in range(proba_corrected.shape[0])
         ]).T
 
     deviation=abs(1-random_results.sum(axis=2)/(proba_corrected.sum(axis=0).reshape(-1,1)))
-
     order=np.argsort(deviation.sum(axis=0))
 
-    random_results_selected=random_results.transpose(1,0,2)[order][:postsampling_reps]
-
-    empty_matrix=np.zeros((target_shape[0]*target_shape[1],len(crops)*postsampling_reps)).astype(float)
-    random_results_selected=random_results_selected.T.reshape(-1,len(crops)*postsampling_reps)
-    empty_matrix[np.where(weights_matrix.flatten()>0)]=random_results_selected
-    empty_matrix=empty_matrix.T
-    empty_matrix=empty_matrix.reshape((28*postsampling_reps,target_shape[0],target_shape[1]))
-
-    crop_expectation_matrix=None
-    if beta==0:
-        crop_expectation_matrix=np.zeros((target_shape[0]*target_shape[1],len(crops))).astype(float)
-        crop_expectation_matrix[np.where(weights_matrix.flatten()>0)]=proba_corrected
-        crop_expectation_matrix=crop_expectation_matrix.T
-        crop_expectation_matrix=crop_expectation_matrix.reshape((len(crops),target_shape[0],target_shape[1]))
-
-    return crop_expectation_matrix,empty_matrix,deviation.T[order][:postsampling_reps]
+    random_results_selected=random_results.transpose(1,0,2)[order][:n_samples_aleatoric]
+    return random_results_selected,proba_corrected,deviation.T[order][:n_samples_aleatoric]
 
 #%%
 year=2000
 all_years=np.arange(1990,2019)
+CAPREG_data=pd.read_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step3.csv")
 #%%
-#TODO load number automatically
-n_considered_crops=25
-n_samples=10
+considered_crops=np.sort(np.unique(CAPREG_data["DGPCM_crop_code"]))
+#%%
+n_considered_crops=len(considered_crops)
+n_samples_epistemic=10
+n_samples_aleatoric=10
 #%%
 nuts_indices=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").read()
 index_dictionary=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
+n_of_fields=rio.open(preprocessed_raster_dir+"n_of_fields_raster_allyears.tif").read()
+weights=rio.open(preprocessed_raster_dir+"cellweight_raster_allyears.tif").read()
 #%%
-CAPREG_data=pd.read_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step3.csv")
+#get boundaries and transform of Europe map
+trans=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").transform
+h=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").shape[0]
+w=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").shape[1]
+
+west_ref,south_ref,east_ref,north_ref=rio.transform.array_bounds(h,w,trans)
 #%%
-result_raster_year=np.ndarray((nuts_indices.shape[1],
+for country in CAPREG_data["country"].unique()[:1]:
+    result_raster_year=np.ndarray((nuts_indices.shape[1],
                                nuts_indices.shape[2],
-                               n_samples,
+                               n_samples_epistemic,
                                n_considered_crops,
                                ))
-
-#%%
-namelist=[]
-for filename in os.listdir(posterior_proba_output_dir+str(year)+"/"):
-    if filename[-8:-4]==str(year):
-        region=filename[:8]
-        namelist.append(region)
-        index=index_dictionary[(index_dictionary["CAPRI_code"]==region)&
+    
+    country_raster=np.zeros((nuts_indices.shape[1],
+                               nuts_indices.shape[2]))
+    regs=CAPREG_data[(CAPREG_data["year"]==year)&(CAPREG_data["country"]==country)]["CAPRI_code"].unique()
+    for reg in regs:
+        index=index_dictionary[(index_dictionary["CAPRI_code"]==reg)&
                  (index_dictionary["year"]==year)]["index"].iloc[0]
         data=np.load(
-            posterior_proba_output_dir+str(year)+"/"+filename
+            posterior_proba_output_dir+str(year)+"/"+reg+"_"+str(year)+".npy"
         )
         result_raster_year[np.where(nuts_indices[np.where(all_years==year)[0][0]]==index)]=data.transpose(1,0,2)
-# %%
-show(result_raster_year.T[24][0].T)
-# %%
-result_raster_year.shape
-# %%
-CAPREG_data[CAPREG_data[]]
-# %%
-""""""
+        country_raster[np.where(nuts_indices[np.where(all_years==year)[0][0]]==index)]=1
+#%%
 
-# %%
-data_main_path=open(str(Path(Path(os.path.abspath(__file__)).parents[1])/"data_main_path.txt"))
-data_main_path=data_main_path.read()[:-1]
-postsampling_reps = 10 
+south_rel=np.where(country_raster==1)[0].max()*1000
+north_rel=np.where(country_raster==1)[0].min()*1000
+west_rel=np.where(country_raster==1)[1].min()*1000
+east_rel=np.where(country_raster==1)[1].max()*1000
 
+north=north_ref-north_rel
+south=north_ref-south_rel
+west=west_ref+west_rel
+east=west_ref+east_rel
+height=(north-south)/1000+1
+width=(east-west)/1000+1
+
+transform=rio.transform.from_bounds(west,south,east,north,width,height)
+#%%
+result_country_raster=np.zeros((int(
+    (n_samples_epistemic*n_samples_aleatoric+1)*n_considered_crops+2),int(height),int(width)))
 
 #%%
-#Posterior_probability_path=(data_main_path+"Results/Posterior_crop_probability_estimates/")
-Posterior_probability_path=data_main_path+"Results/Posterior_crop_probability_estimates/"
-parameter_path = (
-    data_main_path+"delineation_and_parameters/DGPCM_user_parameters.xlsx"
-)
-raw_data_path = data_main_path+"Raw_Data/"
-intermediary_data_path=data_main_path+"Intermediary_Data/"
-grid_1km_path=raw_data_path+"Grid/"
-n_of_fields_path=intermediary_data_path+"Zonal_Stats/"
+index_europe_map=np.where(country_raster==1)
+
+width_values=(index_europe_map[1]-west_rel/1000).astype(int)
+height_values=(index_europe_map[0]-north_rel/1000).astype(int)
+index_country_map=(height_values,width_values)
 #%%
-Simulated_cropshares_path=(data_main_path+"Results/Simulated_consistent_crop_shares/")
+band_list=[]
+
+#write weight as first band
+weights_country=weights[np.where(all_years==year)[0][0]][index_europe_map]
+result_country_raster[0][index_country_map]=weights_country
+band_list.append("weight")
+#%%
+#write number of fields per cell as second band
+n_of_fields_country=n_of_fields[np.where(all_years==year)[0][0]][index_europe_map]
+result_country_raster[1][index_country_map]=n_of_fields_country
+band_list.append("n_of_fields")
+#%%
+selected_posterior_probas=result_raster_year[index_europe_map]
+#%%
+for beta in range(n_samples_epistemic):
+    print("beta: "+str(beta))
+    proba=selected_posterior_probas.transpose(1,0,2)[beta].T
+    random_results_selected,proba_corrected,deviation=generate_random_results(proba,n_of_fields_country,n_samples_aleatoric)
+    
+    random_results_selected=random_results_selected.transpose(1,0,2).reshape(n_samples_aleatoric*n_considered_crops,-1)
+    
+    if beta==0:
+        for c in range(n_considered_crops):
+            result_country_raster[c+2][index_country_map]=proba_corrected.T[c]
+            band_list.append("expected_share_"+considered_crops[c])
+
+    for i in range(n_considered_crops*n_samples_aleatoric):
+        result_country_raster[n_considered_crops+2+beta*(n_considered_crops*n_samples_aleatoric)+i][index_country_map]=random_results_selected[i]
+        band_list.append(str(considered_crops[i//n_samples_aleatoric]+"_"+str(beta)+str(i%n_samples_aleatoric)))
+
+#%%
+crop="VINY"
+np.where(np.char.find(np.array(band_list),crop)>=0)
+
+#%%
+i=11
+i%n_samples_aleatoric
+#%%
+show(result_country_raster[26])
+#%%
+result_country_raster.transpose(1,2,0)[index_country_map].T[np.arange(2)].shape
+
+#%%
+random_results_selected.shape
+#%%
+show(result_raster_year.T[5][0].T)
 # %%
-#import parameters
-countries = pd.read_excel(parameter_path, sheet_name="selected_countries")
-country_codes_relevant = np.array(countries["country_code"])
-nuts_info = pd.read_excel(parameter_path, sheet_name="NUTS")
-all_years = pd.read_excel(parameter_path, sheet_name="selected_years")
-all_years=np.array(all_years["years"])
 
-
+np.where(considered_crops=="GRAS")
 
 #%%
 
