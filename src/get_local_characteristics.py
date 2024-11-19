@@ -24,6 +24,7 @@ ee.Initialize()
 # %%
 reference_raster=rio.open(result_dir+"multi_band_raster/nuts_raster_2003.tif")
 transform_list=list(reference_raster.transform)
+
 #%%
 
 """"""

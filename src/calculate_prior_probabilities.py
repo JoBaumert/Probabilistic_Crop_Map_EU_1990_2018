@@ -104,8 +104,6 @@ all_years=np.arange(1990,2019)
 n_prev_years=3
 crop_min_freq=20
 
-
-
 #%%
 if __name__ == "__main__":
     #information required for all countries and years
@@ -113,7 +111,7 @@ if __name__ == "__main__":
     index_dictionary=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
     lucas_with_covariates=pd.read_csv(preprocessed_csv_dir+"LUCAS_with_covariates.csv")
 
-    for year in all_years[11:]:
+    for year in all_years:
         #year=2000
         print(year)
 
@@ -166,8 +164,7 @@ if __name__ == "__main__":
             country_on_map=np.where(np.isin(nuts_indices[np.where(all_years==year)[0][0]],year_specific_indices),1,0)
             #show(country_on_map)
             country_on_map_indices=np.where(country_on_map==1)
-
-            
+         
             """SCALE THE EXPLANATORY VARIABLES FOR COUNTRY"""
             
             #for some variables there are missing values for some cells (mainly climate variables which originally have a resolution of 12km and only exist for land,
@@ -227,7 +224,8 @@ if __name__ == "__main__":
                 np.save(prior_proba_output_dir+str(year)+"/"+capri_code+"_"+str(year)+".npy",all_probas)
 
 # %%
-
+parameters
+#%%
 """visualize crop probas for selected regions"""
 #x_min=region_indices[24][1].min()
 #x_max=region_indices[24][1].max()
