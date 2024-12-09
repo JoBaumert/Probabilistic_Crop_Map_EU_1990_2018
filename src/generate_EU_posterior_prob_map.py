@@ -38,6 +38,7 @@ os.makedirs(EU_posterior_map_path,exist_ok=True)
 
 #%%
 
+
 #%%
 if __name__ == "__main__":
     cellweight=rio.open(preprocessed_raster_dir+"cellweight_raster_allyears.tif").read()
@@ -75,6 +76,7 @@ if __name__ == "__main__":
         result_raster_year=result_raster_year.transpose(3,2,0,1)
         
         cellweight[np.where(all_years==year)[0]][0].shape
+      
         #%%
         #crop="SWHE"
         #np.where(considered_crops==crop)[0][0]
@@ -82,19 +84,28 @@ if __name__ == "__main__":
         expected_crop_share=result_raster_year[:,0,:,:]
         expected_crop_share=np.insert(expected_crop_share,0,cellweight[np.where(all_years==year)[0]][0],axis=0)
         #show(result_raster_year[12][1])
-
+        #%%
+        expected_crop_share[0]=np.where(expected_crop_share[0]>=0,expected_crop_share[0]*100*10,expected_crop_share[0])
+        #%%
+        factor=np.repeat(1000,n_considered_crops)
+        factor=np.insert(factor,0,1)
+        
+        expected_crop_share=expected_crop_share*factor[:,None,None]
+        #%%
+        plt.hist(expected_crop_share[1][np.where(expected_crop_share[1]>0)],bins=100)
+        #%%
         
         transform=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").transform
         
         with rio.open(EU_posterior_map_path+"EU_expected_crop_shares_"+str(year)+".tif", 'w',
                     width=int(expected_crop_share.shape[2]),height=int(expected_crop_share.shape[1]),transform=transform,
-                    count=expected_crop_share.shape[0],dtype=rio.float32,crs="EPSG:3035") as dst:
-            dst.write(expected_crop_share.astype(rio.float32))
+                    count=expected_crop_share.shape[0],dtype=rio.int16,crs="EPSG:3035") as dst:
+            dst.write(expected_crop_share.astype(rio.int16))
 
     
     
     bands=np.insert(considered_crops,0,"weight")
-    pd.DataFrame({"bands":bands}).to_csv(EU_posterior_map_path+"bands.csv",index=None)
+    #pd.DataFrame({"bands":bands}).to_csv(EU_posterior_map_path+"bands.csv",index=None)
     #%%
     
-    #%%
+# %%

@@ -9,6 +9,12 @@ import os
 from pathlib import Path
 
 #%%
+"""the regions coming from CAPRI often have a different ID than the commonly used NUTS ID. In this file we mainly 
+we map the CAPRI IDs and the commonly used NUTS IDs to ensure each region has a valid NUTS ID
+
+"""
+
+
 main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
 data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
 

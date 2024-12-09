@@ -111,7 +111,7 @@ if __name__ == "__main__":
     index_dictionary=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
     lucas_with_covariates=pd.read_csv(preprocessed_csv_dir+"LUCAS_with_covariates.csv")
 
-    for year in all_years:
+    for year in all_years[:1]:
         #year=2000
         print(year)
 
@@ -143,8 +143,8 @@ if __name__ == "__main__":
             all_var_names.append(varname)
                 
         all_vars=np.array(all_vars)
-
-        for country in countries:
+#%%
+        for country in countries[:1]:
             print(country)
             #load estimated parameters
             for filename in os.listdir(resulting_parameters_dir):
@@ -164,7 +164,7 @@ if __name__ == "__main__":
             country_on_map=np.where(np.isin(nuts_indices[np.where(all_years==year)[0][0]],year_specific_indices),1,0)
             #show(country_on_map)
             country_on_map_indices=np.where(country_on_map==1)
-         
+         #%%
             """SCALE THE EXPLANATORY VARIABLES FOR COUNTRY"""
             
             #for some variables there are missing values for some cells (mainly climate variables which originally have a resolution of 12km and only exist for land,
@@ -247,4 +247,6 @@ index_dictionary[(index_dictionary["country"]==country)&(index_dictionary["year"
 np.where(nuts_indices[10]==288)[0].shape
 # %%
 nuts_indices.shape
+# %%
+
 # %%

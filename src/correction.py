@@ -39,26 +39,6 @@ user_parameter_path=parameter_path+"user_parameters.xlsx"
 GEE_data_path=raw_dir+"/GEE/"
 # %%
 
-def generate_random_results(proba,n_of_fields_country,n_samples_aleatoric):
-    proba_corrected=np.where(proba==0,0.0000001,proba)
-    proba_corrected=(proba_corrected*(1/(proba_corrected.sum(axis=0)+0.000001))).T
-
-    random_results=np.array(
-        [
-            np.random.multinomial(n_of_fields_country[i],proba_corrected[i],100)
-            /n_of_fields_country[i]
-            for i in range(proba_corrected.shape[0])
-        ]).T
-
-    deviation=abs(1-random_results.sum(axis=2)/(proba_corrected.sum(axis=0).reshape(-1,1)))
-    order=np.argsort(deviation.sum(axis=0))
-
-    random_results_selected=random_results.transpose(1,0,2)[order][:n_samples_aleatoric]
-    del random_results
-    gc.collect()
-    return random_results_selected,proba_corrected,deviation.T[order][:n_samples_aleatoric]
-
-#%%
 
 all_years=np.arange(1990,2019)
 CAPREG_data=pd.read_csv(preprocessed_csv_dir+"preprocessed_CAPREG_step3.csv")
@@ -81,14 +61,13 @@ h=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").shape[0
 w=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").shape[1]
 
 west_ref,south_ref,east_ref,north_ref=rio.transform.array_bounds(h,w,trans)
-#%%
-CAPREG_data["country"].unique()
+
 #%%
 if __name__ == "__main__":
-    for year in all_years:
-        
+    for year in all_years[2:]:
+
         for country in CAPREG_data["country"].unique():
-            
+
             if (country=="HR")&(year<1995): #no regional data available for croatia before 1995
                 continue 
             print(country+" "+str(year))
@@ -121,7 +100,7 @@ if __name__ == "__main__":
             east=west_ref+east_rel
             height=(north-south)/1000+1
             width=(east-west)/1000+1
-            
+
             transform=rio.transform.from_bounds(west,south,east,north,width,height)
 
             result_country_raster=np.zeros((int(
@@ -138,79 +117,15 @@ if __name__ == "__main__":
             #write weight as first band
             weights_country=weights[np.where(all_years==year)[0][0]][index_europe_map]
             result_country_raster[0][index_country_map]=weights_country
-            band_list.append("weight")
-            
-            #write number of fields per cell as second band
-            n_of_fields_country=n_of_fields[np.where(all_years==year)[0][0]][index_europe_map]
-            result_country_raster[1][index_country_map]=n_of_fields_country
-            band_list.append("n_of_fields")
-            
-            selected_posterior_probas=result_raster_year[index_europe_map]
 
-            del index_europe_map
-            del country_raster
-            del result_raster_year
-            gc.collect()
+            #import original file
+            orig=rio.open("/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/data/results/multi_band_raster/simulted_crop_shares_old/"+country+"/"+country+str(year)+"_simulated_cropshare_10reps_int.tif").read()
+
+            orig[0]=(result_country_raster[0]*1000).round()
             
-            for beta in range(n_samples_epistemic):
-                print("beta: "+str(beta))
-                proba=selected_posterior_probas.transpose(1,0,2)[beta].T
-                print("sample...")
-                random_results_selected,proba_corrected,deviation=generate_random_results(proba,n_of_fields_country,n_samples_aleatoric)
-                
-                random_results_selected=random_results_selected.transpose(1,0,2).reshape(n_samples_aleatoric*n_considered_crops,-1)
-                
-                if beta==0:
-                    for c in range(n_considered_crops):
-                        result_country_raster[c+2][index_country_map]=proba_corrected.T[c]
-                        band_list.append("expected_share_"+considered_crops[c])
-
-                del proba
-                gc.collect()
-                
-                for i in range(n_considered_crops*n_samples_aleatoric):
-                    result_country_raster[n_considered_crops+2+beta*(n_considered_crops*n_samples_aleatoric)+i][index_country_map]=random_results_selected[i]
-                    band_list.append(str(considered_crops[i//n_samples_aleatoric]+"_"+str(beta)+str(i%n_samples_aleatoric)))
-
-                
-                del random_results_selected
-                del proba_corrected
-                gc.collect
-
-
-            #crop="GRAS"
-            #np.where(np.char.find(np.array(band_list),crop)>=0)
-            #show(result_country_raster[831])
-            
-            del weights_country
-            gc.collect()
-            
-            factor=np.repeat(1000,result_country_raster.shape[0])
-            factor[1]=1
-            
-            refactored_data=factor.reshape(-1,1,1)*result_country_raster
-            del result_country_raster
-            gc.collect()
-
-            refactored_data=refactored_data.round()
-        
             print("save raster files...")
             Path(simulated_cropshares_dir+country+"/").mkdir(parents=True, exist_ok=True)
-            with rio.open(simulated_cropshares_dir+country+"/"+country+str(year)+"_simulated_cropshare_"+str(n_samples_aleatoric)+"reps_int.tif", 'w',
-                        width=int(width),height=int(height),transform=transform,count=refactored_data.shape[0],dtype=rio.int16,crs="EPSG:3035") as dst:
-                dst.write(refactored_data.astype(rio.int16))
-
-
-            band_df=pd.DataFrame({"band":np.arange(len(band_list)),"name":np.array(band_list)})
-
-            band_df.to_csv(
-                simulated_cropshares_dir+country+"/"+country+str(year)+"simulated_cropshare_"+str(n_samples_aleatoric)+"reps_bands.csv"
-            )
-
-            del refactored_data
-            del factor
-            
-            del band_df
-            gc.collect()
-
-#%%
+            with rio.open(simulated_cropshares_dir+country+"/"+country+str(year)+"_simulated_cropshare_int.tif", 'w',
+                        width=int(width),height=int(height),transform=transform,count=orig.shape[0],dtype=rio.int16,crs="EPSG:3035") as dst:
+                dst.write(orig.astype(rio.int16))
+# %%

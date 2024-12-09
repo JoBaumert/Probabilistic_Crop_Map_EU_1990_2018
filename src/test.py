@@ -116,3 +116,58 @@ mapping.to_csv(parameter_path+"CAPRI_Eurostat_NUTS_mapping2.csv",index=None)
 # %%
 test["DGPCM_crop_code"].unique()
 # %%
+test=rio.open("/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/data/results/multi_band_raster/EU_crop_map/EU_expected_crop_shares_2010.tif").read()
+# %%
+test[0][np.where(test[0]>0.0)].sum()
+# %%
+plt.hist(test[0][np.where(test[0]>0)].flatten(),bins=100)
+#%%
+test[0][2000][2030]
+# %%
+AT=rio.open("/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/data/results/multi_band_raster/simulted_crop_shares/AT/AT2010_simulated_cropshare_int.tif").read()
+#%%
+AT.shape
+#%%
+show(AT[0])
+# %%
+weights=rio.open(preprocessed_raster_dir+"cellweight_raster_allyears.tif").read()
+# %%
+nuts_indices=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").read()
+index_dictionary=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
+# %%
+country="AT"
+year=2000
+indices=np.array(index_dictionary[(index_dictionary["year"]==year)&(index_dictionary["country"]==country)]["index"])
+# %%
+locs=np.where(np.isin(nuts_indices[np.where(all_years==year)[0][0]],indices))
+#%%
+plt.hist(weights[np.where(all_years==year)[0][0]][locs])
+# %%
+plt.hist(AT[7].flatten())
+# %%
+test[0][np.where(test[0]>=0)].mean()
+# %%
+lucas=pd.read_csv(preprocessed_csv_dir+"LUCAS_with_covariates.csv")
+# %%
+c,f=np.unique(lucas["nuts0"],return_counts=True)
+# %%
+c[np.argsort(f)]
+# %%
+test_2018=rio.open("/home/baumert/fdiexchange/baumert/DGPCM_19902020/Data/data/results/multi_band_raster/EU_crop_map/EU_expected_crop_shares_2018.tif").read()
+# %%
+test_2018_old=rio.open("/home/baumert/fdiexchange/baumert/project1/Data/Results/Simulated_consistent_crop_shares/EU/expected_crop_share_entire_EU_2018.tif").read()
+# %%
+test_2018_old
+# %%
+show(test_2018_old[6])
+# %%
+show(test_2018[6])
+# %%
+c1,c2=21,24
+indices=np.where(test_2018[0]>0)
+plt.scatter(test_2018[c1][indices].flatten(),y=test_2018_old[c2][indices].flatten(),s=0.001)
+# %%
+show(test_2018_old[24])
+# %%
+show(test_2018[21])
+# %%

@@ -475,3 +475,6 @@ Map.set_center(8,50,12)
 Map
 
 # %%
+elevation_image=ee.Image("USGS/GMTED2010").select("be75")
+# %%
+elevation_image_rep=elevation_image.repr
