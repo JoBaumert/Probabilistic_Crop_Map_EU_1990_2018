@@ -1,1 +1,0 @@
-note: this is the original data but only the columns CNTR_CODE, FID and geometry, as other columns (names) caused problems with utf-8 code
