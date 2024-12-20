@@ -81,8 +81,7 @@ h=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").shape[0
 w=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.tif").shape[1]
 
 west_ref,south_ref,east_ref,north_ref=rio.transform.array_bounds(h,w,trans)
-#%%
-CAPREG_data["country"].unique()
+
 #%%
 if __name__ == "__main__":
     for year in all_years:

@@ -10,19 +10,28 @@ import geemap
 import os
 from pathlib import Path
 # %%
-main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
-result_dir = os.path.join(main_path, "data/results/")
-os.makedirs(result_dir, exist_ok=True)
-raw_dir = main_path+"/data/raw/"
-os.makedirs(raw_dir, exist_ok=True)
-preprocessed_dir = main_path+"/data/preprocessed/"
-os.makedirs(preprocessed_dir, exist_ok=True)
-path_to_taskfile=main_path+"/data/input_preprocessing_taskfile.xlsx"
+try:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+except:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+
+
+#%%
+result_dir = data_main_path+ "/results/"
+#os.makedirs(result_dir, exist_ok=True)
+raw_dir = data_main_path+"/raw/"
+#os.makedirs(raw_dir, exist_ok=True)
+preprocessed_dir = data_main_path+"/preprocessed/"
+#os.makedirs(preprocessed_dir, exist_ok=True)
+path_to_taskfile=data_main_path+"/input_preprocessing_taskfile.xlsx"
+
 #%%
 ee.Authenticate()
 ee.Initialize()
 # %%
-reference_raster=rio.open(result_dir+"multi_band_raster/nuts_raster_2003.tif")
+reference_raster=rio.open(preprocessed_dir+"rasters/nuts_2003.tif")
 transform_list=list(reference_raster.transform)
 
 #%%
@@ -222,8 +231,41 @@ if __name__ == "__main__":
     for i in range(len(tasks)):
         taskname=tasks["task"].iloc[i]
         frequency=tasks["frequency"].iloc[i]
-        if frequency!="static":
-            
+
+        if taskname=="CORINE":
+            """CORINE"""
+            #CORINE classes:
+            mask_string="""
+            b('landcover') == 211 ||
+            b('landcover') == 212 ||
+            b('landcover') == 213 ||
+            b('landcover') == 221 ||
+            b('landcover') == 222 ||
+            b('landcover') == 223 ||
+            b('landcover') == 231 ||
+            b('landcover') == 241 ||
+            b('landcover') == 242 ||
+            b('landcover') == 243 ||
+            b('landcover') == 244 
+            """
+
+            corine_years=[1990,2000,2006,2012,2018]
+            for year in corine_years:
+                corine_image=ee.Image('COPERNICUS/CORINE/V20/100m/'+str(year)).select('landcover')
+                mask = corine_image.expression(mask_string)
+                maks_reproj=mask.reduceResolution(
+                reducer=ee.Reducer.mean(),maxPixels=100).reproject(
+                    crs="epsg:3035",crsTransform=transform_list[:6])
+                
+                geemap.ee_export_image_to_drive(
+                                maks_reproj, 
+                                folder="GEE_DGPCM_19902020",
+                                description="CORINE_"+str(year), 
+                                scale=1000,   
+                                region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
+                            )
+        
+        elif frequency!="static":
             for j in range(len(years)):
                 year=years["year"].iloc[j]
                 dates=get_start_and_end_dates(year,frequency)
@@ -235,36 +277,7 @@ if __name__ == "__main__":
                     description=get_product_name(taskname,year), 
                     scale=1000,          
                     region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
-                )
-
-                #if the selected year is among those neeeded for LUCAS, also do the feature merge for LUCAS points
-                if year in np.array(lucas_feature_years["feature_year"]):
-                    print("export " +get_product_name(taskname,year)+" for LUCAS")
-                    lucas_year=int(lucas_feature_years[lucas_feature_years["feature_year"]==year]["LUCAS_year"].iloc[0])
-                    selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",lucas_year)).select([
-                        "id",
-                        "point_id",
-                        "year",
-                        "nuts3",
-                        "lc1"
-                        "lc1_label",
-                        "gps_lat"
-                        
-                    ])
-                    
-                    feature_image=locals()[taskname](dates["start_dates"],dates["end_dates"])
-                    sampled_points=feature_image.sampleRegions(
-                        collection=selected_LUCAS_data,
-                        projection=ee.Projection("epsg:3035",transform=transform_list[:6])
-                    )
-                    
-                    geemap.ee_export_vector_to_drive(
-                    collection=sampled_points,
-                    folder="GEE_DGPCM_19902020",
-                    description="LUCAS_"+str(lucas_year)+"_"+get_product_name(taskname,year),
-                    fileFormat='CSV',
-                )
-                
+                )               
           
         else:
             print("export " +get_product_name(taskname))
@@ -277,204 +290,13 @@ if __name__ == "__main__":
                     region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
                 )
             
-            #export features for LUCAS points, for each LUCAS year individually to keep output data size limited
-            feature_image=locals()[taskname]()
-            
-            for lucas_year in lucas_feature_years["LUCAS_year"].unique():
-                lucas_year=int(lucas_year)
-                print("export for LUCAS "+str(lucas_year))
-                selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",lucas_year)).select([
-                        "id",
-                        "point_id",
-                        "year",
-                        "nuts3",
-                        "lc1"
-                        "lc1_label",
-                        "gps_lat"
-                        
-                ])
-                
-                sampled_points=feature_image.sampleRegions(
-                    collection=selected_LUCAS_data,
-                    projection=ee.Projection("epsg:3035",transform=transform_list[:6])
-                    )
-                
-                geemap.ee_export_vector_to_drive(
-                    collection=sampled_points,
-                    folder="GEE_DGPCM_19902020",
-                    description="LUCAS_"+str(lucas_year)+"_"+get_product_name(taskname),
-                    fileFormat='CSV',
-                )
+
+
 
             
 #%%
-for lucas_year in lucas_feature_years["LUCAS_year"].unique():
-    print(lucas_year)
-#%%
-lucas_feature_years["LUCAS_year"].unique()[0]
-#%%
-a=get_mean_temperature("1987-01-01","1987-12-31",return_reprojection=True)
-#%%
-lucas_year=2006
-selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",lucas_year)).select([
-                        "id",
-                        "point_id",
-                        "year",
-                        "nuts3",
-                        "lc1"
-                        "lc1_label",
-                        "gps_lat"
-                        
-                ])
-                
-sampled_points=feature_image.sampleRegions(
-    collection=selected_LUCAS_data,
-    projection=ee.Projection("epsg:3035",transform=transform_list[:6])
-    )
-Map=geemap.Map()
-Map.addLayer(sampled_points)
-Map.set_center(8,50,8)
-Map
-# %%
-#this works!
-geemap.ee_export_image_to_drive(
-                get_sand(), #here we call the function indicated by taskname
-                folder="GEE",
-                description="sand_test_EU_v3", 
-                scale=1000,   
-                region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
-            )
-# %%
-list(reference_raster.bounds)
-#%%
 
 
 
-# %%
-LUCAS_dataset = ee.FeatureCollection('JRC/LUCAS_HARMO/THLOC/V1')
-elevation_image=get_elevation()
-# %%
-
-selected_LUCAS_data=LUCAS_dataset.filter(ee.Filter.eq("year",2018)).select([
-    "id",
-    "point_id",
-    "year",
-    "nuts3",
-    "lc1"
-    "lc1_label",
-    "gps_lat"
-    
-])
-# %%
-sampled_points=elevation_image.sampleRegions(
-    collection=selected_LUCAS_data,
-    projection=ee.Projection("epsg:3035",transform=transform_list[:6])
-    
-)
-
-# %%
-geemap.ee_export_vector_to_drive(
-    collection=sampled_points,
-    folder="GEE",
-    description="elevation_LUCAS_2018",
-    fileFormat='CSV',
-)
-#%%
-a=geemap.ee_to_numpy(
-                get_sand(), #here we call the function indicated by taskname
-                scale=1000,   
-                region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
-            )
-# %%
-show(a.transpose(2,0,1)[0])
-# %%
-elevation_LUCAS_test=pd.read_csv(raw_dir+"elevation_LUCAS_2018.csv")
-# %%
-elevation_LUCAS_test.iloc[:,1]
-# %%
-comparison_data=pd.read_csv(raw_dir+"elevation.csv")
-# %%
-comparison_data=comparison_data[comparison_data["year"]==2018]
-# %%
-comparison_data
-# %%
-selection=pd.merge(elevation_LUCAS_test[["point_id","be75"]],comparison_data[["point_id","elevation"]],
-                   how="right",on="point_id")
-# %%
-import matplotlib.pyplot as plt
-plt.scatter(x=selection.be75,y=selection.elevation,s=0.1)
-# %%
-"""test"""
-correct_raster=rio.open(result_dir+"multi_band_raster/nuts_raster_2003.tif")
-# %%
-comparison_raster=rio.open(raw_dir+"mean_temperature_1987.tif")
-# %%
-comparison_raster.transform
-# %%
-correct_raster.transform
-# %%
-show(comparison_raster.read()[0])
-# %%
-"""unrelated tests"""
-cropdata=pd.read_csv(result_dir+"csv/filtered_regional_cropdata.csv")
-# %%
-cropdata[cropdata["3"]=="LEVL"]["2"].unique()
-# %%
-cropdata[(cropdata["3"]=="LEVL")&(cropdata["4"]==2010)&(cropdata["1"]=="DE")]
-# %%
-"""CORINE"""
-#CORINE classes:
-mask_string="""
-b('landcover') == 211 ||
-b('landcover') == 212 ||
-b('landcover') == 213 ||
-b('landcover') == 221 ||
-b('landcover') == 222 ||
-b('landcover') == 223 ||
-b('landcover') == 231 ||
-b('landcover') == 241 ||
-b('landcover') == 242 ||
-b('landcover') == 243 ||
-b('landcover') == 244 
-"""
-
-corine_years=[1990,2000,2006,2012,2018]
-for year in corine_years:
-    corine_image=ee.Image('COPERNICUS/CORINE/V20/100m/'+str(year)).select('landcover')
-    mask = corine_image.expression(mask_string)
-    maks_reproj=mask.reduceResolution(
-    reducer=ee.Reducer.mean(),maxPixels=100).reproject(
-        crs="epsg:3035",crsTransform=transform_list[:6])
-    
-    geemap.ee_export_image_to_drive(
-                    maks_reproj, 
-                    folder="GEE_DGPCM_19902020",
-                    description="CORINE_"+str(year), 
-                    scale=1000,   
-                    region=ee.Geometry.Rectangle(list(reference_raster.bounds),proj="epsg:3035",evenOdd=False)
-                )
-# %%
 
 
-
-# %%
-Map=geemap.Map()
-Map.addLayer(mask)
-Map.set_center(8,50,8)
-Map
-# %%
-maks_reproj=mask.reduceResolution(
-    reducer=ee.Reducer.mean(),maxPixels=100).reproject(
-        crs="epsg:3035",crsTransform=transform_list[:6])
-# %%
-#maks_reproj=mask.reproject(crs="epsg:3035",crsTransform=transform_list[:6])
-
-Map=geemap.Map()
-Map.addLayer(maks_reproj)
-Map.set_center(8,50,12)
-Map
-
-# %%
-elevation_image=ee.Image("USGS/GMTED2010").select("be75")
-# %%
-elevation_image_rep=elevation_image.repr

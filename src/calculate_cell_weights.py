@@ -7,12 +7,16 @@ from rasterio import features
 import numpy as np
 import os
 from pathlib import Path
-from src.utils.preprocess_crop_data import cluster_crop_names
+from utils.preprocess_crop_data import cluster_crop_names
 
 #%%
 
-main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
-data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+try:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+except:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
 
 raw_dir = data_main_path+"/raw"
 preprocessed_dir = data_main_path+"/preprocessed"
@@ -57,13 +61,12 @@ corine_preprocessed_19902018=np.array(corine_preprocessed_19902018)
 crop_delineation=pd.read_excel(parameter_path+"DGPCM_crop_delineation.xlsx")
 all_crops=np.sort(crop_delineation.dropna(subset="DGPCM_code")["DGPCM_code"].unique())
 
-preprocessed_crop_data=cluster_crop_names(crop_data=crop_data,crop_delineation=crop_delineation,
+preprocessed_crop_data=cluster_crop_names(crop_data_raw=crop_data,crop_delineation=crop_delineation,
                                           all_crops=all_crops)
 
 
 countries=np.sort(np.array(pd.read_excel(parameter_path+"user_parameters.xlsx",sheet_name="countries")["country_code"]))
 preprocessed_crop_data=preprocessed_crop_data[preprocessed_crop_data["country"].isin(countries)]
-
 
 #%%
 #output dfs and rasters:
@@ -163,15 +166,10 @@ for j,year in enumerate(years):
         else:
             continue
 
-
-
     new_mapping_df=new_mapping_df[~new_mapping_df["NUTS_ID"].isin(excluded_nuts_ids)]
-
     #show(np.where(np.isin(output_raster,new_mapping_df["index"].unique()),1,0))
-
     relevant_cropdata=preprocessed_crop_data[
         (preprocessed_crop_data["year"]==year)&(preprocessed_crop_data["NUTS_ID"].isin(new_mapping_df["NUTS_ID"]))]
-
 
     relevant_cropdata.drop_duplicates(subset=["CAPRI_code","DGPCM_crop_code"],inplace=True)
    
@@ -184,9 +182,7 @@ for j,year in enumerate(years):
     ).sum().reset_index()
 
     uaa_calculated.rename(columns={"value":"UAA_CAPRI"},inplace=True)
-
     uaa_calculated["UAA_CAPRI"]=uaa_calculated["UAA_CAPRI"]*10
-
     corine_data_relevant=corine_preprocessed_19902018[np.where(years==year)[0][0]]
 
     uaa_CORINE_list=[]
@@ -239,14 +235,8 @@ for j,year in enumerate(years):
     weight_raster_allyears[j]=weight_raster
     nuts_indices_relevant_allyears[j]=nuts_indices_relevant
     uaa_raster_relevant_allyears[j]=uaa_raster_relevant
-# %%
-relevant_cropdata_allyears[(relevant_cropdata_allyears["CAPRI_code"]=="DEA10000")&(relevant_cropdata_allyears["DGPCM_crop_code"]=="MAIZ")]
-#%%
-relevant_cropdata_allyears[relevant_cropdata_allyears["country"]=="DE"]["CAPRI"]
-#%%
-show(np.where(weight_raster_allyears[20]>0,1,0))
-# %%
-uaa_calculated_allyears
+
+
 # %%
 #save uaa_calculated,weight_raster,nuts_indices_relevant and uaa_raster_relevant
 uaa_calculated_allyears.to_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")

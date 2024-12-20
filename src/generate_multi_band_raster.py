@@ -8,11 +8,14 @@ import numpy as np
 import os
 from pathlib import Path
 #%%
-main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+try:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+except:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
 
 
-main_path=str(Path(Path(os.path.abspath(__file__)).parents[0]))
-data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
 
 raw_dir = data_main_path+"/raw"
 preprocessed_dir = data_main_path+"/preprocessed"

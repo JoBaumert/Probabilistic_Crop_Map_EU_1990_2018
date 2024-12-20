@@ -7,8 +7,14 @@ from pathlib import Path
 import os
 
 # %%
-main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
-data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+try:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+except:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+
+
 
 #%%
 

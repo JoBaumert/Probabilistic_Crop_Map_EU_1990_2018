@@ -193,7 +193,7 @@ nuts_indices=rio.open(preprocessed_raster_dir+"nuts_indices_relevant_allyears.ti
 uaa_allyears=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
 #%%
 if __name__ == "__main__":
-    for year in all_years[11:22]:
+    for year in all_years:
         #year=1995
         all_countries=np.unique(CAPREG_data[CAPREG_data["year"]==year]["country"])
 
@@ -370,33 +370,5 @@ if __name__ == "__main__":
                 gc.collect()
                 jax.clear_caches()
 
-#%%
-#x=p_result
-#x_reshaped = x.reshape(I,C).transpose()
-#weighted_crops = jnp.multiply(weight_array, x_reshaped)
-
-#%%
-#plt.scatter(weighted_crops.sum(axis=1),true_croparea_region)
-
-#plt.scatter(p_result,q,s=0.1)
-# %%
-
-#%%
-"""visualize"""
-#beta=5
-#crop="GRAS"
-#x_min=region_indices[1].min()
-#x_max=region_indices[1].max()
-#y_min=region_indices[0].min()
-#y_max=region_indices[0].max()#
-#
-#test=np.zeros(((y_max-y_min+1),(x_max-x_min+1)))
-#probas=result_array[beta]
-#
-#c=np.where(np.array(CAPREG_regional_data["DGPCM_crop_code"])==crop)[0][0]
-#test[tuple(np.array([region_indices[0]-y_min,region_indices[1]-x_min]))]=probas.T[c]#
-#
-#show(test)
-# %%
 
 # %%

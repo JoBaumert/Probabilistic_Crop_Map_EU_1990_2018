@@ -150,8 +150,6 @@ if __name__ == "__main__":
             index=selection[selection["CAPRI_code"]==capri_reg]["index"].iloc[0]
             region_position=np.where(nuts_indices_relevant[y]==index)
             fieldsize_raster[y][region_position]=uaa_raster_allyears[y][region_position]*n_fields_reg
-    #%%
-    show(np.where(fieldsize_raster[20]>0.1,1,0))
 
     #%%
     # export data for country

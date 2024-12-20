@@ -5,8 +5,14 @@ import gc
 import os
 from pathlib import Path
 #%%
-main_path=str(Path(Path(os.path.abspath(__file__)).parents[0]))
-data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+try:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[0]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+except:
+    main_path = str(Path(Path(os.path.abspath(__file__)).parents[1]))
+    data_main_path=open(main_path+"/src/data_main_path.txt").read()[:-1]
+
+
 #%%
 raw_dir = data_main_path+"/raw"
 os.makedirs(raw_dir, exist_ok=True)
@@ -17,6 +23,7 @@ os.makedirs(preprocessed_dir, exist_ok=True)
 csv_output_dir=preprocessed_dir+"/csv/"
 os.makedirs(csv_output_dir, exist_ok=True)
 
+#the following is the raw CAPRI output:
 input_path = raw_dir+"/res_time_series_17.csv"
 output_file = csv_output_dir+"preprocessed_CAPREG_step1.csv"
 
@@ -91,9 +98,5 @@ print("Processing complete")
 
 
 
-# %%
-test=pd.read_csv(output_file,header=None)
 
-#%%
-test
 # %%

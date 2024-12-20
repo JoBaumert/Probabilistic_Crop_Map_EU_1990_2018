@@ -2,7 +2,8 @@
 import numpy as np
 import pandas as pd
 # %%
-def cluster_crop_names(crop_data,crop_delineation,all_crops):
+def cluster_crop_names(crop_data_raw,crop_delineation,all_crops):
+    crop_data=crop_data_raw.copy()
     crop_data.drop("type",inplace=True,axis=1)
     crop_data.drop("Unnamed: 0",inplace=True,axis=1)
     
@@ -38,19 +39,16 @@ def cluster_crop_names(crop_data,crop_delineation,all_crops):
     calc_maiz_df=crop_data[crop_data["crop"].isin(["MAIZ","MAIF"])].groupby([
         "CAPRI_code","NUTS_ID","year","country","NUTS_level"
     ]).sum().reset_index()
-    calc_maiz_df.drop("crop",axis=1,inplace=True)
     calc_maiz_df["DGPCM_crop_code"]=np.repeat("MAIZ",len(calc_maiz_df))
 
     calc_oliv_df=crop_data[crop_data["crop"].isin(["OLIV","TABO"])].groupby([
         "CAPRI_code","NUTS_ID","year","country","NUTS_level"
     ]).sum().reset_index()
-    calc_oliv_df.drop("crop",axis=1,inplace=True)
     calc_oliv_df["DGPCM_crop_code"]=np.repeat("OLIV",len(calc_oliv_df))
 
     calc_viny_df=crop_data[crop_data["crop"].isin(["VINY","TWIN"])].groupby([
         "CAPRI_code","NUTS_ID","year","country","NUTS_level"
     ]).sum().reset_index()
-    calc_viny_df.drop("crop",axis=1,inplace=True)
     calc_viny_df["DGPCM_crop_code"]=np.repeat("VINY",len(calc_viny_df))
 
     remaining_crops=crop_delineation["CAPRI_code"].unique()[np.where(crop_delineation["CAPRI_code"].unique().astype(str)!="nan")]
@@ -86,3 +84,4 @@ def cluster_crop_names(crop_data,crop_delineation,all_crops):
     c.sort_values(by=["year","CAPRI_code","NUTS_ID","country","DGPCM_crop_code"],inplace=True)
 
     return c
+#%%

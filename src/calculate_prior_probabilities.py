@@ -111,7 +111,7 @@ if __name__ == "__main__":
     index_dictionary=pd.read_csv(preprocessed_csv_dir+"uaa_calculated_allyears.csv")
     lucas_with_covariates=pd.read_csv(preprocessed_csv_dir+"LUCAS_with_covariates.csv")
 
-    for year in all_years[:1]:
+    for year in all_years:
         #year=2000
         print(year)
 
@@ -143,8 +143,8 @@ if __name__ == "__main__":
             all_var_names.append(varname)
                 
         all_vars=np.array(all_vars)
-#%%
-        for country in countries[:1]:
+
+        for country in countries:
             print(country)
             #load estimated parameters
             for filename in os.listdir(resulting_parameters_dir):
@@ -223,30 +223,6 @@ if __name__ == "__main__":
                 print("save prior probabilities for region "+capri_code)
                 np.save(prior_proba_output_dir+str(year)+"/"+capri_code+"_"+str(year)+".npy",all_probas)
 
-# %%
-parameters
-#%%
-"""visualize crop probas for selected regions"""
-#x_min=region_indices[24][1].min()
-#x_max=region_indices[24][1].max()
-#y_min=region_indices[24][0].min()
-#y_max=region_indices[24][0].max()#
-
-#test=np.zeros(((y_max-y_min+1),(x_max-x_min+1)))
-#probas=np.load(prior_proba_output_dir+"DEA50000_"+str(year)+".npy")
-#test[tuple(np.array([region_indices[24][0]-y_min,region_indices[24][1]-x_min]))]=probas[0].T[16]#
-
-#show(test)
-# %%
-year_specific_indices
-# %%
-region_indices
-# %%
-index_dictionary[(index_dictionary["country"]==country)&(index_dictionary["year"]==1990)]
-# %%
-np.where(nuts_indices[10]==288)[0].shape
-# %%
-nuts_indices.shape
 # %%
 
 # %%
