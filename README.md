@@ -1,5 +1,5 @@
-# Probabilistic Crop Map EU 1990-2018
-![alt text](https://github.com/JoBaumert/Probabilistic_Crop_Map_EU_1990_2018/blob/master/map.png)
+# Probabilistic Crop Map EU 1990-2018 (by Josef Baumert, Thomas Heckelei, and Hugo Storm)
+![alt text](https://github.com/JoBaumert/Probabilistic_Crop_Map_EU_1990_2018/blob/master/map.png) <br>
 All generated maps are available for download from here: https://zenodo.org/records/14409498
 The code for reproduction is contained in the directory "src". The folder "delineation_and_parameters" contains some rather small excel files that describe how crop types are matched between different data sources (e.g., LUCAS and Eurostat) and predefine some hyperparameters. The following is a guideline for the reproduction of the maps.
 
@@ -31,7 +31,12 @@ pipenv shell
 pip install numpyro[cuda] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
    ```
 ## Step 2: Establish correct folder structure
-create a folder named "Data" where the input and output data will be stored. The user can choose where to locate this directory on the local machine. However, when choosing the location of this directory consider that some input and output files are quite large. To ensure that the python scripts find this folder, you must specify the path to the main data directory with a text file that is stored in the same directory as the code (i.e., in Probabilistic_Crop_Mapping_EU). In the directory "src" you find a file named "data_main_path.txt". Overwrite the text that is currently in it and provide the path to your data directory.  
+1) create a folder named "data" where the input and output data will be stored. The user can choose where to locate this directory on the local machine. However, when choosing the location of this directory consider that some input and output files are quite large. To ensure that the python scripts find this folder, you must specify the path to the main data directory with a text file that is stored in the same directory as the code (i.e., in Probabilistic_Crop_Mapping_EU). In the directory "src" you find a file named "data_main_path.txt". Overwrite the text that is currently in it and provide the path to your data directory.
+2) move the directory "delineation_and_parameters" into this newly generated "data" directory
+3) create 3 empty directories, named "raw", "preprocessed", and "results" within the "data" directory
+
+## Step 3: Manual download of some input data
+
 
 
 Recommended order of running files:
