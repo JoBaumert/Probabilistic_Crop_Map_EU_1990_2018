@@ -2,10 +2,21 @@
 The code is contained in the directory "src". The folder "delineation_and_parameters" contains some rather small excel files that describe how crop types are matched between different data sources (e.g., LUCAS and Eurostat) and predefine some hyperparameters. The following is a guideline for the reproduction of the maps.
 
 ## Step 1: Preparation of Directories and Installation of Dependencies
+### option 1) using docker container
 The repository is set up to run in a Docker container. Pull the repository and open it in VS Code with the Remote-Containers extension. This requires that you have a) a Docker Engine installed (https://docs.docker.com/engine/install/) and b) the VS Code Dev-Containers extension installed (Extension identifier: ```ms-vscode-remote.remote-containers ```). <br>
 With this in place follow the instructions to create the development container in VS Code:
 1) Clone the repository: ```git clone https://github.com/JoBaumert/Probabilistic_Crop_Map_EU_1990_2018.git```
 2) Open the clone folder in VS Code and hit ```Ctrl+Shift+P``` and select ```remote-Containers: Reopen in Container```
+All the necessary dependencies are then automatically installed in the Docker container.
+### option 2) without docker container
+1) Install Pipenv from https://pipenv.pypa.io/en/latest/
+2) Clone the repository: ```git clone https://github.com/JoBaumert/Probabilistic_Crop_Map_EU_1990_2018.git```
+3) Create pipenv environment by running ```pipenv install --dev```
+4) (Optional) In order to use GPU support it is required to install numpyro[cuda] manually using wheels, currently seems to be not supported in pipenv
+```
+pipenv shell
+pip install numpyro[cuda] -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+   ```
 
 Recommended order of running files:
 1.	generate_multi_band_raster.py
