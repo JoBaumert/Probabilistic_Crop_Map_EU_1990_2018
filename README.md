@@ -37,7 +37,14 @@ pip install numpyro[cuda] -f https://storage.googleapis.com/jax-releases/jax_cud
 3) create 3 empty directories, named "raw", "preprocessed", and "results" within the "data" directory
 
 ## Step 3: Manual download of some input data
-
+- Download NUTS region boundary shapefiles from here: https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics
+  Select the years 2003, 2006, 2010, 2013, 2016, and 2021, "01M" for scale and "EPSG:3035" for coordinate reference system
+- Save the downloaded Zip files in a directory named "nuts_shapedata" in the "raw" directory
+- Get regional information on produced crop acreages according to the procedure described here: https://www.capri-model.org/dokuwiki_help/doku.php    (see section "CAPREG").
+- Save the output of this regional data preprocessing procedure in a csv file named "res_time_series_17.csv" in the directory "raw"
+-    ALTERNATIVE 1: In case you would like to use regional data directly from Eurostat, follow the procedure described here: https://github.com/JoBaumert/Probabilistic_Crop_Mapping_EU
+-    ALTERNATIVE 2: contact josef.baumert@ilr.uni-bonn for a version of the csv file named "res_time_series_17.csv"
+  
 
 
 Recommended order of running files:
