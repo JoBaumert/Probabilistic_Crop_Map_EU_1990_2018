@@ -33,7 +33,7 @@ pip install numpyro[cuda] -f https://storage.googleapis.com/jax-releases/jax_cud
    ```
 ## Step 2: Establish correct folder structure
 1) create a folder named "data" where the input and output data will be stored. The user can choose where to locate this directory on the local machine. However, when choosing the location of this directory consider that some input and output files are quite large. To ensure that the python scripts find this folder, you must specify the path to the main data directory with a text file that is stored in the same directory as the code (i.e., in Probabilistic_Crop_Mapping_EU). In the directory "src" you find a file named "data_main_path.txt". Overwrite the text that is currently in it and provide the path to your data directory.
-2) move the directory "delineation_and_parameters" into this newly generated "data" directory
+2) move the directory "delineation_and_parameters" with its content into this newly generated "data" directory
 3) create 3 empty directories, named "raw", "preprocessed", and "results" within the "data" directory
 
 ## Step 3: Manual download of some input data
