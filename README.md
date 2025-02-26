@@ -1,4 +1,5 @@
-# Probabilistic Crop Map EU 1990-2018 (by Josef Baumert, Thomas Heckelei, and Hugo Storm)
+# Probabilistic Crop Map EU 1990-2018 
+### (by Josef Baumert, Thomas Heckelei, and Hugo Storm)
 ![alt text](https://github.com/JoBaumert/Probabilistic_Crop_Map_EU_1990_2018/blob/master/map.png) <br>
 All generated maps are available for download from here: https://zenodo.org/records/14409498
 The code for reproduction is contained in the directory "src". The folder "delineation_and_parameters" contains some rather small excel files that describe how crop types are matched between different data sources (e.g., LUCAS and Eurostat) and predefine some hyperparameters. The following is a guideline for the reproduction of the maps.
