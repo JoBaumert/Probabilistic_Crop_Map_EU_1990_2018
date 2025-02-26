@@ -1,6 +1,6 @@
 Recommended order of running files:
 1.	generate_multi_band_raster.py
-2.	csv_cleaner.py (loads the raw data from CAPRI and saves only data for relevant crops in smaller chunks)
+2.	csv_cleaner.py (loads the raw data of regional crop acreages from CAPRI and saves only data for relevant crops in smaller chunks)
 3.	check_NUTS_region_availability.py (maps region codes used by CAPRI with region codes used by Eurostat etc.)
 4.	get_local_characteristics.py (loads relevant data from google earth engine)
 5.	LUCAS_preprocessing.py (selects only agricultural land use classes from the raw LUCAS dataset)
