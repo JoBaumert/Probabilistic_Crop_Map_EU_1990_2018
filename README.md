@@ -1,3 +1,13 @@
+# Probabilistic Crop Map EU 1990-2018
+The code is contained in the directory "src". The folder "delineation_and_parameters" contains some rather small excel files that describe how crop types are matched between different data sources (e.g., LUCAS and Eurostat) and predefine some hyperparameters. The following is a guideline for the reproduction of the maps.
+
+## Step 1: Preparation of Directories and Installation of Dependencies
+First, create a directory in which you would like to store all the code. Then, copy the files provided in this repository to this directory e.g., by cloning the repository as follows (works on Linux):
+```
+git clone https://github.com/JoBaumert/Probabilistic_Crop_Mapping_EU.git
+```
+In any case it is crucial that the file structure is preserved. <br>
+
 Recommended order of running files:
 1.	generate_multi_band_raster.py
 2.	csv_cleaner.py (loads the raw data of regional crop acreages from CAPRI and saves only data for relevant crops in smaller chunks)
