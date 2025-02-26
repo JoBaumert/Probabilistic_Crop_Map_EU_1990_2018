@@ -62,9 +62,9 @@ then run: <br>
 
 ## Step 5: estimation and generation of crop maps
 finally, run the following files in this order: <br>
-9. parameter_estimation.py (scale explanatory variables from LUCAS for every country separately and run logistic regression for each country)
-10. calculate_prior_probabilities.py (load estimated parameters and covariates and calculate the (prior) probability of each crop for every region in every year)
-11.	incorporate_regional_data.py (find posterior probabilities that are as close as possible to the prior probabilities while abiding by the regional constraints. We do this for each region and every year separately). 
-12.	LUCAS_field_size_calculation.py (calculate estimated field sizes and from this the number of fields per cell using LUCAS data. This information is used in the random sampling step)
-13.	generate_EU_posterior_crop_map.py (load posterior crop probabilities for all regions and spatially merge them in one Europe-wide raster file per year, i.e., the file “EU_expected_crop_shares_year.tif”)
+9. parameter_estimation.py (scale explanatory variables from LUCAS for every country separately and run logistic regression for each country) <br>
+10. calculate_prior_probabilities.py (load estimated parameters and covariates and calculate the (prior) probability of each crop for every region in every year) <br>
+11.	incorporate_regional_data.py (find posterior probabilities that are as close as possible to the prior probabilities while abiding by the regional constraints. We do this for each region and every year separately). <br>
+12.	LUCAS_field_size_calculation.py (calculate estimated field sizes and from this the number of fields per cell using LUCAS data. This information is used in the random sampling step) <br>
+13.	generate_EU_posterior_crop_map.py (load posterior crop probabilities for all regions and spatially merge them in one Europe-wide raster file per year, i.e., the file “EU_expected_crop_shares_year.tif”) <br>
 14.	merge_results.py (load regional posterior probabilities for a country and year and sample randomly using the estimated number of fields. Outputs the ensemble of crop maps for each country)
