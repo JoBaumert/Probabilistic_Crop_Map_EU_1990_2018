@@ -2,7 +2,10 @@
 The code is contained in the directory "src". The folder "delineation_and_parameters" contains some rather small excel files that describe how crop types are matched between different data sources (e.g., LUCAS and Eurostat) and predefine some hyperparameters. The following is a guideline for the reproduction of the maps.
 
 ## Step 1: Preparation of Directories and Installation of Dependencies
-The repository is set up to run in a Docker container. Pull the repository and open it in VS Code with the Remote-Containers extension. This requires that you have a) a Docker Engine installed (https://docs.docker.com/engine/install/) and b) the VS Code Dev-Containers extension installed (Extension identifier: ```ms-vscode-remote.remote-containers´´´)
+The repository is set up to run in a Docker container. Pull the repository and open it in VS Code with the Remote-Containers extension. This requires that you have a) a Docker Engine installed (https://docs.docker.com/engine/install/) and b) the VS Code Dev-Containers extension installed (Extension identifier: ```ms-vscode-remote.remote-containers ```). <br>
+With this in place follow the instructions to create the development container in VS Code:
+1) Clone the repository: ```git clone https://github.com/hstorm/pp_agecon_erae.git```
+2) Open the clone folder in VS Code and hit ```Ctrl+Shift+P``` and select ```emote-Containers: Reopen in Container```
 
 Recommended order of running files:
 1.	generate_multi_band_raster.py
